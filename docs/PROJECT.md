@@ -17,7 +17,8 @@ demonstrates AI-native work instead of describing it. The repository is
 - G2. Every fact the server returns comes from one TOML file; placeholders
   never reach a client.
 - G3. `assess_role_fit` reports strong / partial / gap per criterion with
-  evidence, using whole-word matching, and shows gaps rather than hiding them.
+  evidence, using whole-word matching, against criteria the reviewer supplies,
+  and shows gaps rather than hiding them.
 - G4. Production runs within the Azure Container Apps free monthly grant.
 - G5. Changes reach production only through testing on the Pi and an explicit
   human approval.
@@ -35,7 +36,7 @@ demonstrates AI-native work instead of describing it. The repository is
 
 - **Reviewer (hiring panel member):** adds the connector; asks for profile,
   experience, skills and case studies; runs `interview_candidate`; reads
-  `assess_role_fit` against a role's criteria.
+  `assess_role_fit` with criteria from their own job description.
 - **Nate (maintainer):** edits the TOML file; checks it in testing with
   `validate_cv`; approves promotion to production.
 
@@ -56,6 +57,8 @@ demonstrates AI-native work instead of describing it. The repository is
 | R11 | Image built by Nix for x86_64-linux | must | Clarify round 1 Q3; round 2 Q3 |
 | R12 | README connect steps verified against current Copilot Studio and Claude UIs | should | brainstorm "Open questions" |
 | R13 | Fictional example CV kept in `examples/` for tests | should | first build session |
+| R14 | `assess_role_fit` accepts role criteria supplied by the caller; the CV file holds only generic defaults that name no role | must | Nate, after M2 |
+| R15 | Public contact email published; no phone number or street address | must | Nate, after M2 |
 
 ## Apps
 
@@ -127,6 +130,7 @@ cv-mcp | python | yes | needs FastMCP
 | 2026-10-22 | Nix-built x86_64 image; Pi builds, NixyBookPro fallback | Platform rule; cloud hosts run x86_64 | Dockerfile |
 | 2026-10-22 | Project and repo both named `cv-mcp` | Project names allow only `[a-z0-9._-]`; one name everywhere | Keep repo as `cv_mcp` |
 | 2026-10-22 | No authentication on production | Public, read-only, LinkedIn-level content | Token or OAuth |
+| 2026-10-22 | Reviewers supply role-fit criteria | Criteria in a public file would reveal the role; criteria written from the CV always match | Real criteria in `cv.toml` |
 
 ## Sources
 

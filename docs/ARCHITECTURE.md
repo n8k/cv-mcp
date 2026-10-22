@@ -90,9 +90,11 @@ Read-only MCP surface:
 
 - Tools: `get_profile`, `get_experience(company?)`, `get_skills(category?)`,
   `list_case_studies`, `get_case_study(case_id)`, `search_cv(query)`,
-  `assess_role_fit(role_title?)`. All annotated `readOnlyHint`.
+  `assess_role_fit(criteria?, role_title?)`. All annotated `readOnlyHint`.
+  `criteria` is up to 20 items of `{name, keywords[1–30]}`, validated by schema;
+  without it the generic defaults from `cv.toml` are used and the result says so.
 - Resources: `cv://full` (JSON), `cv://markdown`.
-- Prompt: `interview_candidate(focus?)`.
+- Prompt: `interview_candidate(job_description?, focus?)`.
 
 Control MCP surface (testing):
 

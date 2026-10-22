@@ -16,10 +16,10 @@ Read-only endpoint, `/mcp`:
 | Tool | `get_experience` | Work history, optional company filter |
 | Tool | `get_skills` | Skills by category |
 | Tool | `list_case_studies` / `get_case_study` | STAR stories |
-| Tool | `search_cv` | Whole-word keyword search across everything |
-| Tool | `assess_role_fit` | Evidence per role criterion, with gaps shown |
+| Tool | `search_cv` | Whole-word keyword search across everything (simple plurals included) |
+| Tool | `assess_role_fit` | Evidence against criteria **you supply** from your job description; gaps shown, not hidden |
 | Resource | `cv://full`, `cv://markdown` | Whole CV as JSON / Markdown |
-| Prompt | `interview_candidate` | Reviewer starter: structured screening |
+| Prompt | `interview_candidate` | Paste a job description; the agent derives criteria and runs a structured screening |
 
 Control endpoint, `/control/mcp` — only when `CV_MCP_CONTROL_TOKEN` is set
 (testing tier), and only with `Authorization: Bearer <token>`:
@@ -36,6 +36,9 @@ Control endpoint, `/control/mcp` — only when `CV_MCP_CONTROL_TOKEN` is set
 Everything comes from `cv.toml`, re-read on every call, so edits go live
 without a restart. Any value starting with `TODO` is hidden from clients until
 you replace it. The file is public: keep it to LinkedIn-level detail.
+
+`[target_role]` in the file holds generic default criteria, used only when a
+caller supplies none; they deliberately name no specific role.
 
 `examples/cv.example.toml` is a fully populated, fictional CV used by the tests.
 
