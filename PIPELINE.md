@@ -199,10 +199,12 @@ Checked while generating (2026-10-22, in a scratch environment, not on the Pi):
 
 To do on the Pi before the first run:
 
-- [ ] `nix flake lock` in this repo (no `flake.lock` yet; generation had no
-      GitHub access). Prefer the Pi's nixpkgs revision for cache hits:
-      `nix flake lock --override-input nixpkgs github:nixos/nixpkgs/<rev from the NixOS repo's flake.lock>`.
-      Then `nix build --dry-run .#cv-mcp .#image` on the Pi.
+- [x] `flake.lock` committed: nixpkgs `nixos-26.05` at `da6dc0e7` (the
+      revision CI resolved on 2026-10-22, and the one tested against). CI
+      cannot create or update the lock (the alpine step image has no `git`),
+      so update it locally with `nix flake update` and commit it. The Pi's
+      own NixOS config pins an older nixpkgs; both are cache.nixos.org hits.
+      Check on the Pi: `nix build --dry-run .#cv-mcp .#image`.
 - [ ] Gitea repo `nate/cv-mcp` exists (pull mirror of GitHub, like the NixOS
       repo). PROJECT.md assumed Gitea primary with a push mirror to GitHub;
       the work so far is on GitHub, so this follows the NixOS repo's pattern.
