@@ -28,7 +28,7 @@ problems."""
 
 [person.contact]
 email = "nathan.kemppainen@gmail.com"
-linkedin = "TODO: LinkedIn URL"
+linkedin = "https://www.linkedin.com/in/n8kemp"
 
 [[education]]
 institution = "Sauder School of Business"
