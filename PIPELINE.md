@@ -81,12 +81,31 @@ Fill in after each deploy (the SHA is also the image tag).
 
 | Tier | Where | Image | Deployed SHA | Date |
 |---|---|---|---|---|
-| testing | Pi, `/opt/cicd/cv-mcp/testing` | `gitea.local/nate/cv-mcp:<sha>` | not deployed yet | |
+| testing | Pi, `/opt/cicd/cv-mcp/testing` | `gitea.local/nate/cv-mcp:<sha>` | `0bbe58052719047d638b0023f898205f962f9e22` (main after #3) | 2026-10-23 |
 | production | Azure Container Apps `cv-mcp` (rg `cv-mcp`) | `ghcr.io/n8k/cv-mcp:<sha>` | not deployed yet | |
 
 Which commit is running, from the host:
 `cat /opt/cicd/cv-mcp/testing/release.env`; for production:
 `az containerapp show -n cv-mcp -g cv-mcp --query properties.template.containers[0].image`.
+
+## Milestone sign-offs
+
+### M2: real content (2026-10-23)
+
+Signed off by Nate as public-safe, against the CV served by the testing tier at
+`0bbe580` (`cv.toml` as committed on `main`).
+
+- `validate_cv` through `https://cv-mcp.local/control/mcp` reports clean:
+  `ok: true`, no `errors`, no `todos`, no `criteria_with_no_evidence`. The same
+  result from `server.validate()` run against `cv.toml` at this commit.
+- `cv://markdown` read through the read-only `/mcp` endpoint and checked:
+  - contact is the public email only; no phone number or street address (R15);
+  - LinkedIn-level detail only, nothing employer-sensitive (R7);
+  - `[target_role]` holds generic defaults that name no role (R14);
+  - no placeholder text reaches the client (R5).
+
+Any later change to `cv.toml` needs the same check before it is promoted to
+production: `validate_cv` clean on testing, and the Markdown read through once.
 
 ## Rollback
 
@@ -205,17 +224,21 @@ To do on the Pi before the first run:
       so update it locally with `nix flake update` and commit it. The Pi's
       own NixOS config pins an older nixpkgs; both are cache.nixos.org hits.
       Check on the Pi: `nix build --dry-run .#cv-mcp .#image`.
-- [ ] Gitea repo `nate/cv-mcp` exists (pull mirror of GitHub, like the NixOS
+- [x] Gitea repo `nate/cv-mcp` exists (pull mirror of GitHub, like the NixOS
       repo). PROJECT.md assumed Gitea primary with a push mirror to GitHub;
       the work so far is on GitHub, so this follows the NixOS repo's pattern.
       Overrule if Gitea should be primary.
-- [ ] NixOS config switched with `cv-mcp-pipeline.nix`, `cv-mcp-domains.nix`
+- [x] NixOS config switched with `cv-mcp-pipeline.nix`, `cv-mcp-domains.nix`
       and `"nate/cv-mcp"` in `woodpecker.repos` (activates the repo, sets
       Trusted network + volumes, recreates the webhook).
       `getent hosts cv-mcp.local` resolves; SAN list has it.
-- [ ] First `main` push green; then set `probe = true` and rebuild; probe up
-      in Prometheus, logs in Loki.
-- [ ] Control endpoint: sops key added, `control = true`.
+- [x] First `main` push green (after `flake.lock`, #3); `probe = true` and
+      rebuilt.
+- [ ] Probe `cv-mcp-testing` up in Prometheus and container logs in Loki
+      (Grafana Explore: `probe_success{project="cv-mcp-testing"}`,
+      `{container="cv-mcp-testing-cv-mcp-1"}`).
+- [x] Control endpoint: sops key added, `control = true`; 200 with the token,
+      401 without. Token rotated once (2026-10-23) after it was exposed.
 
 Before the first promotion (M5):
 
