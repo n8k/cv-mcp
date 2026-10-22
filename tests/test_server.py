@@ -313,3 +313,87 @@ def test_profile_includes_education_and_markdown_lists_it(tmp_path, monkeypatch)
             return (await c.read_resource("cv://markdown"))[0].text
     md = asyncio.run(read())
     assert "## Education" in md and "B.A., Uni (2004)" in md and "**Languages:** English" in md
+
+
+# ---------- Reviewer-supplied criteria ----------
+
+REVIEWER_CRITERIA = [
+    {"name": "Stakeholder management", "keywords": ["stakeholders", "executive"]},
+    {"name": "Cloud platforms", "keywords": ["AWS", "Kubernetes"]},
+]
+
+
+def test_role_fit_with_supplied_criteria():
+    fit = call(server.mcp, "assess_role_fit", {"criteria": REVIEWER_CRITERIA, "role_title": "Delivery Lead"})
+    by_name = {c["criterion"]: c for c in fit["criteria"]}
+    assert fit["role"] == "Delivery Lead"
+    assert fit["criteria_source"] == "supplied by caller"
+    assert "note" not in fit
+    assert by_name["Stakeholder management"]["coverage"] != "gap"
+    assert by_name["Cloud platforms"]["coverage"] == "gap"
+    assert by_name["Cloud platforms"]["keywords_missing"] == ["AWS", "Kubernetes"]
+
+
+def test_role_fit_defaults_carry_a_note():
+    fit = call(server.mcp, "assess_role_fit")
+    assert fit["criteria_source"] == "generic defaults from the CV file"
+    assert "job description" in fit["note"]
+
+
+def test_supplied_criteria_without_title_are_unnamed():
+    fit = call(server.mcp, "assess_role_fit", {"criteria": REVIEWER_CRITERIA})
+    assert fit["role"] == "unnamed role"
+
+
+@pytest.mark.parametrize(
+    "criteria",
+    [
+        [{"name": "x", "keywords": []}],                      # no keywords
+        [{"name": "", "keywords": ["a"]}],                    # empty name
+        [{"name": "x", "keywords": ["a" * 61]}],              # keyword too long
+        [{"name": "x", "keywords": ["a"] * 31}],              # too many keywords
+        [{"name": f"c{i}", "keywords": ["a"]} for i in range(21)],  # too many criteria
+    ],
+)
+def test_supplied_criteria_are_validated(criteria):
+    with pytest.raises(Exception):
+        call(server.mcp, "assess_role_fit", {"criteria": criteria})
+
+
+def test_role_fit_schema_advertises_criteria():
+    async def run():
+        async with Client(server.mcp) as c:
+            return next(t for t in await c.list_tools() if t.name == "assess_role_fit").input_schema
+    schema = json.dumps(asyncio.run(run()))
+    assert "criteria" in schema and "keywords" in schema
+
+
+@pytest.mark.parametrize(
+    ("term", "text", "expected"),
+    [
+        ("stakeholder", "managed stakeholders", 1),
+        ("stakeholders", "one stakeholder", 1),
+        ("OKR", "KPIs & OKRs", 1),
+        ("process", "two processes", 1),
+        ("agile release trains", "an agile release train", 1),
+        ("AWS", "AW", 0),
+    ],
+)
+def test_plural_matching(term, text, expected):
+    assert server._count_matches(term, text) == expected
+
+
+def test_prompt_with_job_description():
+    async def run():
+        async with Client(server.mcp) as c:
+            r = await c.get_prompt("interview_candidate", {"job_description": "Lead delivery of X."})
+            return r.messages[0].content.text
+    text = asyncio.run(run())
+    assert "Lead delivery of X." in text and "assess_role_fit" in text and "Ask me" not in text
+
+
+def test_prompt_without_job_description_asks_for_one():
+    async def run():
+        async with Client(server.mcp) as c:
+            return (await c.get_prompt("interview_candidate")).messages[0].content.text
+    assert "Ask me for the job description" in asyncio.run(run())

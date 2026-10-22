@@ -24,9 +24,10 @@ import re
 import tomllib
 from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from fastmcp import FastMCP
+from pydantic import BaseModel, Field
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse
@@ -77,10 +78,17 @@ def _find_placeholders(obj: Any, path: str = "") -> list[str]:
 def _word_pattern(term: str) -> re.Pattern[str]:
     """Whole-word, case-insensitive match. Multi-word terms match as a phrase.
 
-    Lookarounds instead of \\b so terms like "C++" or ".NET" still work.
+    Simple plurals match both ways: "stakeholder" finds "stakeholders" and
+    "OKRs" finds "OKR". Lookarounds instead of \\b so terms like "C++" or
+    ".NET" still work.
     """
-    phrase = r"\s+".join(re.escape(part) for part in term.split())
-    return re.compile(rf"(?<!\w){phrase}(?!\w)", re.IGNORECASE)
+    parts = term.split()
+    last = parts[-1]
+    if re.fullmatch(r"\w*[^s\W]s", last, re.IGNORECASE) and len(last) > 3:
+        last = last[:-1]  # "stakeholders" -> "stakeholder", but not "process"
+    stem = r"\s+".join(re.escape(p) for p in [*parts[:-1], last])
+    suffix = "(?:e?s)?" if re.search(r"\w$", last) else ""
+    return re.compile(rf"(?<!\w){stem}{suffix}(?!\w)", re.IGNORECASE)
 
 
 def _count_matches(term: str, text: str) -> int:
@@ -174,8 +182,10 @@ def search_cv(query: str) -> list[dict]:
     return sorted(hits, key=lambda h: h["score"], reverse=True)[:10]
 
 
-def _role_fit(cv: dict[str, Any], role_title: str | None = None) -> dict:
-    role = cv["target_role"]
+def _role_fit(cv: dict[str, Any], criteria: list[dict] | None = None, role_title: str | None = None) -> dict:
+    defaults = cv.get("target_role", {})
+    supplied = criteria is not None
+    criteria = criteria if supplied else defaults.get("criteria", [])
     sources: list[tuple[str, str]] = []
     person = cv.get("person", {})
     if person.get("summary"):
@@ -196,7 +206,7 @@ def _role_fit(cv: dict[str, Any], role_title: str | None = None) -> dict:
         sources.append((f"Skills ({cat})", ", ".join(items)))
 
     results = []
-    for crit in role["criteria"]:
+    for crit in criteria:
         kws = crit["keywords"]
         evidence = []
         for label, text in sources:
@@ -213,21 +223,48 @@ def _role_fit(cv: dict[str, Any], role_title: str | None = None) -> dict:
             "evidence": evidence[:5],
         })
 
-    return {
-        "role": role_title or role.get("title", "target role"),
-        "method": "Whole-word keyword match of CV content against each criterion. Deterministic; no LLM judgement.",
+    out = {
+        "role": role_title or (None if supplied else defaults.get("title")) or "unnamed role",
+        "criteria_source": "supplied by caller" if supplied else "generic defaults from the CV file",
+        "method": "Whole-word keyword match (simple plurals included) of CV content against each criterion. Deterministic; no LLM judgement.",
         "criteria": results,
     }
+    if not supplied:
+        out["note"] = (
+            "These are generic default criteria written from the CV itself, so they will mostly match. "
+            "For a meaningful assessment, call again with criteria taken from the job description."
+        )
+    return out
+
+
+class Criterion(BaseModel):
+    """One requirement of the role, with the words that would evidence it."""
+
+    name: Annotated[str, Field(min_length=1, max_length=120, description="Requirement, e.g. 'Stakeholder management'")]
+    keywords: Annotated[
+        list[Annotated[str, Field(min_length=1, max_length=60)]],
+        Field(min_length=1, max_length=30, description="3–8 words or short phrases that would show this in a CV"),
+    ]
 
 
 @mcp.tool(annotations=READ_ONLY)
-def assess_role_fit(role_title: str | None = None) -> dict:
-    """Evidence-based fit against the target role's criteria.
+def assess_role_fit(
+    criteria: Annotated[
+        list[Criterion] | None,
+        Field(max_length=20, description="The role's requirements. Derive 4–8 from the job description. Omit to use generic defaults."),
+    ] = None,
+    role_title: str | None = None,
+) -> dict:
+    """Evidence-based fit of this CV against a role's criteria.
 
-    For each criterion, returns the CV evidence that matches its keywords and a
-    coverage rating. Criteria with no evidence are reported as gaps, not hidden.
+    Pass the role's own criteria: turn the job description into 4–8 requirements,
+    each with 3–8 keywords or short phrases. For each criterion the tool returns
+    the CV evidence that matches, the keywords found and missing, and a coverage
+    rating (strong / partial / gap). Gaps are reported, not hidden. Without
+    criteria it falls back to generic defaults, which say little about fit.
     """
-    return _role_fit(_clean(load_cv()), role_title)
+    supplied = [c.model_dump() for c in criteria] if criteria is not None else None
+    return _role_fit(_clean(load_cv()), supplied, role_title)
 
 
 @mcp.resource("cv://full", mime_type="application/json", description="The complete CV as JSON.")
@@ -267,13 +304,22 @@ def cv_markdown() -> str:
 
 
 @mcp.prompt()
-def interview_candidate(focus: str = "the target role") -> str:
-    """Starter prompt for a reviewer: run a structured screening interview using this CV."""
+def interview_candidate(job_description: str = "", focus: str = "") -> str:
+    """Starter prompt for a reviewer: screen this CV against your job description."""
+    role = f" for a role focused on {focus}" if focus else ""
+    jd = (
+        f"\n\nJob description:\n{job_description.strip()}\n\n"
+        "Turn this job description into 4–8 criteria, each with 3–8 keywords or short phrases, "
+        "and pass them to assess_role_fit."
+        if job_description.strip()
+        else " Ask me for the job description first, turn it into 4–8 criteria with 3–8 keywords each, "
+        "and pass them to assess_role_fit."
+    )
     return (
-        f"You are screening Nathan Kemppainen for a role focused on {focus}. "
-        "Use get_profile, then assess_role_fit. For each criterion rated 'partial' or "
-        "'gap', pull supporting detail with search_cv or get_case_study, then propose "
-        "two probing interview questions. Cite which tool each fact came from."
+        f"You are screening Nathan Kemppainen{role}. Start with get_profile.{jd} "
+        "For each criterion rated 'partial' or 'gap', look for supporting detail with search_cv "
+        "or get_case_study before concluding, then propose two probing interview questions. "
+        "Cite which tool each fact came from, and do not state anything the tools did not return."
     )
 
 

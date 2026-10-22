@@ -26,10 +26,9 @@ with a friendly intercultural approach to people-management, using a balance \
 of soft skills and tech background to untangle priorities, risk and thorny \
 problems."""
 
-# Contact details are deliberately not published here; see README.
 [person.contact]
-email = "TODO: public contact email, or remove this line"
-linkedin = "TODO: LinkedIn URL"
+email = "nathan.kemppainen@gmail.com"
+linkedin = "https://www.linkedin.com/in/n8kemp"
 
 [[education]]
 institution = "Sauder School of Business"
@@ -224,17 +223,18 @@ tags = ["MCP", "agentic AI", "generative AI", "Copilot Studio", "Python", "innov
 
 [[case_studies]]
 id = "homelab-agents"
-title = "TODO: personal multi-agent platform — only if you want this public"
-situation = "TODO"
-task = "TODO"
-action = "TODO"
-result = "TODO"
-tags = ["agentic AI", "MCP", "cost control"]
+title = "Self-hosted multi-agent platform"
+situation = "Wanted hands-on, day-to-day experience of agentic AI on infrastructure under my own control."
+task = "Run several AI agents on a home server, connected to real projects, with the safeguards an organisation would expect."
+action = "Built a declarative NixOS server running several agent harnesses (Hermes Agent, OpenClaw, Omnigent) across multiple model providers with fallback chains, using Claude for heavy lifting and delegating simpler work to cheaper models. Gave agents access to projects through MCP servers split into read-only and token-protected control endpoints, kept secrets in sops-nix, and put changes through a Gitea, Woodpecker, Prometheus, Grafana and Loki pipeline with testing before production. Built and benchmarked Japanese-English translation agents."
+result = "A working environment for testing agentic patterns end to end; its safeguards (read-only versus control access, secrets management, testing tiers, cost routing) carried straight into how this CV server was designed."
+tags = ["agentic AI", "MCP", "governance", "cost control", "NixOS", "CI/CD", "Claude Code"]
 
-# The role being assessed by assess_role_fit.
-# Replace the title and criteria with those of the role being assessed.
+# Generic default criteria for assess_role_fit, used only when a caller
+# supplies no criteria of their own. Reviewers should pass the criteria of
+# their actual role; these deliberately name no specific role.
 [target_role]
-title = "TODO: target role title"
+title = "General profile (default criteria)"
 
 [[target_role.criteria]]
 name = "Portfolio and project management"
