@@ -3,3 +3,9 @@ __pycache__/
 .venv/
 .env
 .pytest_cache/
+# nix build outputs
+result
+result-*
+# CI step leftovers and agent scratch space
+*.tar
+.scratch/

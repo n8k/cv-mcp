@@ -1,0 +1,80 @@
+# cd.yaml — deploy the testing tier on the Pi after ci.yaml passes on main.
+#
+# Same contract as hippo and 321fire: this workflow only writes two files into
+# /opt/cicd/cv-mcp/testing/ and never talks to Docker itself.
+#   compose.yaml   copied from deploy/compose.yaml
+#   release.env    APP_IMAGE=gitea.local/nate/cv-mcp:<commit sha>
+# cv-mcp-testing-deploy.path (NixOS config repo, hosts/nixos/projects/cv-mcp-pipeline.nix)
+# sees release.env change and runs `docker compose up --wait`. Then `verify` checks
+# https://cv-mcp.local/health through nginx.
+#
+# Rollback: run this workflow manually on an older commit (Woodpecker → the commit's
+# pipeline → Restart), which writes that commit's SHA tag. Nothing is rebuilt.
+# Needs the repo Trusted (network + volumes).
+
+when:
+  - event: [push, manual]
+    branch: main
+
+depends_on:
+  - ci
+
+clone:
+  git:
+    image: woodpeckerci/plugin-git
+    extra_hosts:
+      - "gitea.local:host-gateway"
+
+variables:
+  - &host_nix
+    image: alpine:3.22
+    volumes:
+      - /nix:/nix:ro
+    environment:
+      PATH: /nix/var/nix/profiles/system/sw/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      NIX_REMOTE: daemon
+      NIX_CONFIG: |
+        experimental-features = nix-command flakes
+        accept-flake-config = false
+      XDG_CACHE_HOME: /woodpecker/.cache
+
+steps:
+  - name: deploy-testing
+    image: alpine:3.22
+    volumes:
+      - /opt/cicd/cv-mcp/testing:/deploy
+    commands:
+      - cp deploy/compose.yaml /deploy/compose.yaml
+      # Written then renamed, so the path unit never sees a half-written file.
+      - printf 'APP_IMAGE=gitea.local/nate/cv-mcp:%s\n' "${CI_COMMIT_SHA}" > /deploy/release.env.tmp
+      - mv /deploy/release.env.tmp /deploy/release.env
+      - cat /deploy/release.env
+
+  - name: verify
+    <<: *host_nix
+    extra_hosts:
+      - "cv-mcp.local:host-gateway"
+    environment:
+      PATH: /nix/var/nix/profiles/system/sw/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      NIX_REMOTE: daemon
+      NIX_CONFIG: |
+        experimental-features = nix-command flakes
+        accept-flake-config = false
+      XDG_CACHE_HOME: /woodpecker/.cache
+      # The host CA bundle (local CA included), mounted by trustHostCAs.
+      CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+    commands:
+      # The deploy unit waits up to 180 s for the container's health check. Allow a little
+      # more, then require two healthy answers in a row (the old container may still
+      # answer for a moment while compose swaps them).
+      - |
+        nix develop .#ci -c sh -c '
+          ok=0
+          for i in $(seq 1 40); do
+            if curl -fsS --max-time 5 https://cv-mcp.local/health; then
+              ok=$((ok + 1)); [ "$ok" -ge 2 ] && exit 0
+            else ok=0; fi
+            sleep 5
+          done
+          echo "cv-mcp.local/health not healthy after deploy" >&2
+          exit 1'

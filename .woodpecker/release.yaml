@@ -1,0 +1,139 @@
+# release.yaml — promote a commit to production (Azure Container Apps).
+#
+# Runs only on a Woodpecker deployment event to `production`: a human opens the
+# pipeline of a commit that passed ci.yaml and cd.yaml and chooses Promote →
+# production (or `woodpecker-cli pipeline deploy nate/cv-mcp <number> production`).
+# That promotion is the approval; nothing reaches production on push.
+#
+#   image    build the x86_64 image for the promoted commit (skipped when GHCR already
+#            has that SHA, i.e. a rollback)
+#   scan     Trivy, same gate and ignore file as ci.yaml
+#   publish  push ghcr.io/n8k/cv-mcp:<sha> and move `production` to it
+#   deploy   az containerapp update --image ghcr.io/n8k/cv-mcp:<sha>
+#   verify   public https://<fqdn>/health (allows for a cold start from zero)
+#
+# The Pi is aarch64. `image` needs an x86_64 builder on the host nix-daemon (NixyBookPro
+# as a remote builder, ARCHITECTURE.md); without one this step fails with
+# "required system or feature not available". See PIPELINE.md, Pre-flight.
+#
+# Rollback: promote the older commit's pipeline to production. Its image is already in
+# GHCR, so nothing is rebuilt; deploy just points the app back at that tag.
+#
+# Repo secrets (Woodpecker, names only): ghcr_token, azure_client_id, azure_tenant_id,
+# azure_client_secret, azure_subscription_id. Needs the repo Trusted (network + volumes).
+
+when:
+  - event: deployment
+    evaluate: 'CI_PIPELINE_DEPLOY_TARGET == "production"'
+
+clone:
+  git:
+    image: woodpeckerci/plugin-git
+    extra_hosts:
+      - "gitea.local:host-gateway"
+
+variables:
+  - &nix_env
+    PATH: /nix/var/nix/profiles/system/sw/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    NIX_REMOTE: daemon
+    NIX_CONFIG: |
+      experimental-features = nix-command flakes
+      accept-flake-config = false
+    XDG_CACHE_HOME: /woodpecker/.cache
+  - &host_nix
+    image: alpine:3.22
+    volumes:
+      - /nix:/nix:ro
+    environment: *nix_env
+  # Not secrets: where the app lives. Created once by hand (PIPELINE.md, Production setup).
+  - &azure_app
+    AZURE_RESOURCE_GROUP: cv-mcp
+    AZURE_CONTAINERAPP: cv-mcp
+  - &ghcr
+    GHCR_USER: n8k
+    GHCR_TOKEN:
+      from_secret: ghcr_token
+
+steps:
+  - name: image
+    <<: *host_nix
+    environment:
+      <<: [*nix_env, *ghcr]
+    commands:
+      # Only commits on main reach production.
+      - '[ "${CI_COMMIT_BRANCH}" = main ] || { echo "refusing to promote branch ${CI_COMMIT_BRANCH}"; exit 1; }'
+      - |
+        if nix develop .#ci -c skopeo --insecure-policy inspect --creds "$GHCR_USER:$GHCR_TOKEN" \
+             docker://ghcr.io/n8k/cv-mcp:${CI_COMMIT_SHA} > /dev/null 2>&1; then
+          echo "ghcr.io/n8k/cv-mcp:${CI_COMMIT_SHA} already published: rollback, not rebuilding"
+          touch .already-published
+        else
+          "$(nix build --no-link --print-out-paths .#packages.x86_64-linux.image)" > image-amd64.tar
+        fi
+
+  - name: scan
+    <<: *host_nix
+    commands:
+      - |
+        [ -e .already-published ] && { echo "already scanned when first published"; exit 0; }
+        nix develop .#ci -c trivy image --input image-amd64.tar --ignorefile .trivyignore.yaml \
+          --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress
+
+  - name: publish
+    <<: *host_nix
+    environment:
+      <<: [*nix_env, *ghcr]
+    commands:
+      - |
+        creds="$GHCR_USER:$GHCR_TOKEN"
+        if [ ! -e .already-published ]; then
+          nix develop .#ci -c skopeo --insecure-policy copy --dest-creds "$creds" \
+            docker-archive:image-amd64.tar docker://ghcr.io/n8k/cv-mcp:${CI_COMMIT_SHA}
+        fi
+        # Mutable tier tag, same digest. Azure always runs the SHA tag.
+        nix develop .#ci -c skopeo --insecure-policy copy --src-creds "$creds" --dest-creds "$creds" \
+          docker://ghcr.io/n8k/cv-mcp:${CI_COMMIT_SHA} docker://ghcr.io/n8k/cv-mcp:production
+
+  - name: deploy
+    <<: *host_nix
+    environment:
+      <<: [*nix_env, *azure_app]
+      AZURE_CLIENT_ID:
+        from_secret: azure_client_id
+      AZURE_TENANT_ID:
+        from_secret: azure_tenant_id
+      AZURE_CLIENT_SECRET:
+        from_secret: azure_client_secret
+      AZURE_SUBSCRIPTION_ID:
+        from_secret: azure_subscription_id
+    commands:
+      - |
+        nix develop .#deploy -c sh -c '
+          set -e
+          export AZURE_CONFIG_DIR=$PWD/.azure AZURE_CORE_COLLECT_TELEMETRY=false
+          az login --service-principal --username "$AZURE_CLIENT_ID" \
+            --password "$AZURE_CLIENT_SECRET" --tenant "$AZURE_TENANT_ID" --output none
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          az containerapp update --name "$AZURE_CONTAINERAPP" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --image ghcr.io/n8k/cv-mcp:${CI_COMMIT_SHA} --output none
+          az containerapp show --name "$AZURE_CONTAINERAPP" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --query properties.configuration.ingress.fqdn --output tsv > .fqdn
+          az logout
+          rm -rf .azure'
+      - echo "production is https://$(cat .fqdn)"
+
+  - name: verify
+    <<: *host_nix
+    commands:
+      # Scale-to-zero: the first request starts a replica, so allow about two minutes.
+      - |
+        nix develop .#ci -c sh -c '
+          url="https://$(cat .fqdn)/health"
+          for i in $(seq 1 24); do
+            curl -fsS --max-time 20 "$url" && exit 0
+            sleep 5
+          done
+          echo "$url not healthy after promotion" >&2
+          exit 1'

@@ -1,0 +1,95 @@
+# ci.yaml — lint, test, build, scan and publish the testing image.
+#
+# Runs on the Pi's Docker agent (aarch64). Every step uses the Pi's own nix-daemon (/nix
+# mounted read-only, host nix client), so the Python closure is fetched once into the host
+# store, not on every run. Tools come from the flake's devShells.ci (`nix develop .#ci`).
+# Needs the repo Trusted (network + volumes); cicd.nix's woodpecker.repos sets that.
+#
+#   lint     ruff on the Python, nixfmt on the Nix files
+#   test     nix flake check: the pytest suite and the app, built as derivations
+#   image    stream the aarch64 image to image.tar
+#   scan     Trivy on image.tar, fails on fixable HIGH/CRITICAL
+#   publish  push gitea.local/nate/cv-mcp:<sha>, then move the `testing` tag to it
+#
+# image/scan/publish run on main only; pull requests stop after test.
+# Production (x86_64, Azure) is release.yaml, started by a human promotion.
+
+when:
+  - event: [push, manual]
+    branch: main
+  - event: pull_request
+
+# gitea.local is only in the host's /etc/hosts, so the clone container is pointed at the
+# host. Needs the repo Trusted (network).
+clone:
+  git:
+    image: woodpeckerci/plugin-git
+    extra_hosts:
+      - "gitea.local:host-gateway"
+
+variables:
+  - &host_nix
+    image: alpine:3.22
+    volumes:
+      - /nix:/nix:ro
+    environment:
+      PATH: /nix/var/nix/profiles/system/sw/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      NIX_REMOTE: daemon
+      # The container has no /etc/nix/nix.conf, so the client needs this.
+      NIX_CONFIG: |
+        experimental-features = nix-command flakes
+        accept-flake-config = false
+      XDG_CACHE_HOME: /woodpecker/.cache
+  - &on_main
+    when:
+      - event: [push, manual]
+        branch: main
+
+steps:
+  - name: lint
+    <<: *host_nix
+    commands:
+      - nix develop .#ci -c ruff check .
+      - nix develop .#ci -c nixfmt --check flake.nix nix/python-packages.nix
+
+  - name: test
+    <<: *host_nix
+    commands:
+      - nix flake check --print-build-logs
+
+  - name: image
+    <<: [*host_nix, *on_main]
+    commands:
+      - '"$(nix build --no-link --print-out-paths .#image)" > image.tar'
+
+  - name: scan
+    <<: [*host_nix, *on_main]
+    commands:
+      - >-
+        nix develop .#ci -c trivy image --input image.tar --ignorefile .trivyignore.yaml
+        --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress
+
+  - name: publish
+    <<: [*host_nix, *on_main]
+    extra_hosts:
+      - "gitea.local:host-gateway"
+    environment:
+      PATH: /nix/var/nix/profiles/system/sw/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      NIX_REMOTE: daemon
+      NIX_CONFIG: |
+        experimental-features = nix-command flakes
+        accept-flake-config = false
+      XDG_CACHE_HOME: /woodpecker/.cache
+      REGISTRY_USER:
+        from_secret: ci_registry_user
+      REGISTRY_PASSWORD:
+        from_secret: ci_registry_password
+    commands:
+      - >-
+        nix develop .#ci -c skopeo --insecure-policy copy --dest-creds "$REGISTRY_USER:$REGISTRY_PASSWORD"
+        docker-archive:image.tar docker://gitea.local/nate/cv-mcp:${CI_COMMIT_SHA}
+      # Mutable tier tag, same digest. Deploys always use the SHA tag.
+      - >-
+        nix develop .#ci -c skopeo --insecure-policy copy --src-creds "$REGISTRY_USER:$REGISTRY_PASSWORD"
+        --dest-creds "$REGISTRY_USER:$REGISTRY_PASSWORD"
+        docker://gitea.local/nate/cv-mcp:${CI_COMMIT_SHA} docker://gitea.local/nate/cv-mcp:testing

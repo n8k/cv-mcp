@@ -1,0 +1,23 @@
+# Testing tier on the Pi. CD copies this file to /opt/cicd/cv-mcp/testing/compose.yaml
+# and writes release.env beside it; cv-mcp-testing-deploy.service (NixOS config repo,
+# hosts/nixos/projects/cv-mcp-pipeline.nix) runs it with two env files:
+#   /run/secrets/rendered/cv-mcp-testing.env   APP_PORT, CV_MCP_CONTROL_TOKEN (when enabled)
+#   release.env                                APP_IMAGE=gitea.local/nate/cv-mcp:<sha>
+# Production does not use this file (Azure Container Apps, see PIPELINE.md).
+services:
+  cv-mcp:
+    image: ${APP_IMAGE:?APP_IMAGE not set}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:?APP_PORT not set}:8000"
+    environment:
+      # Empty = no /control/mcp.
+      CV_MCP_CONTROL_TOKEN: ${CV_MCP_CONTROL_TOKEN:-}
+    read_only: true
+    tmpfs:
+      - /tmp
+    # The image's own HEALTHCHECK (cv-mcp-health) is what `up --wait` waits for.
+    logging:
+      driver: journald
+      options:
+        tag: cv-mcp-testing
