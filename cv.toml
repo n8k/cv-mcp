@@ -1,0 +1,257 @@
+# Single source of truth for the CV MCP server.
+# Everything the server exposes comes from this file. It is PUBLIC:
+# keep it to what you would put on LinkedIn.
+# Any value starting with "TODO" is hidden from clients until you replace it.
+# Check your progress with the validate_cv control tool (testing tier).
+
+[person]
+name = "Nathan Kemppainen"
+headline = "Agile | Portfolio & Project Management | Innovation"
+location = "Tsukuba, Ibaraki, Japan"
+languages = ["English (native)", "Japanese (JLPT N1)"]
+certifications = [
+  "Project Management Professional (PMP), 2012–present",
+  "Certified ScrumMaster (CSM), 2016–present",
+  "Scaled Agile Framework Practice Consultant (SAFe SPC), 2025–2026",
+]
+career_highlights = [
+  "World's first cloud-native telecom launch.",
+  "Radio system in the Canadian Parliament's historic buildings.",
+  "Mountain-top tower with a mirror that bounces signal to an edge data center in the valley.",
+]
+summary = """
+Experienced leader with 15 years experience in project/portfolio management, \
+technology, agile and waterfall delivery. A keen observer of human behavior \
+with a friendly intercultural approach to people-management, using a balance \
+of soft skills and tech background to untangle priorities, risk and thorny \
+problems."""
+
+# Contact details are deliberately not published here; see README.
+[person.contact]
+email = "TODO: public contact email, or remove this line"
+linkedin = "TODO: LinkedIn URL"
+
+[[education]]
+institution = "Sauder School of Business"
+qualification = "Master Clinic on Solving Tough Problems"
+year = "2014"
+
+[[education]]
+institution = "Gustavus Adolphus College, USA"
+qualification = "B.A., Sociology/Anthropology"
+year = "2004"
+
+# Most recent first.
+[[experience]]
+id = "manulife"
+company = "Manulife"
+title = "Governance Manager"
+location = "Tokyo"
+start = "2022-11"
+end = "present"
+highlights = [
+  "Portfolio management and project governance: led quarterly executive review meetings for a $60M portfolio (50+ projects a year).",
+  "Innovative AI: created a Copilot prompt that makes polished business cases based on project-plan and financial inputs.",
+  "Automated reporting: eliminated manual creation of PowerPoint decks for reporting, moving to Power BI dashboards with real-time KPIs and OKRs and exportable decks for presentations or archives.",
+  "Saving executives' time: created a process for online business case reviews using Power Automate. It accepts document submissions, alerts stakeholders and creates auditable approvals; an early-voting system lets executives pre-read and approve early, which eliminated more than 50% of executive meetings.",
+  "Scaled Agile (SAFe) transformation: key volunteer in transforming the delivery model from waterfall-based to value streams. Identified value streams, coached agile release trains (ARTs), taught certification courses to 200+ people, and updated the governance model to enable business agility and continuous value delivery.",
+]
+skills = ["portfolio management", "project governance", "Copilot", "Power BI", "Power Automate", "SAFe", "value streams", "KPI", "OKR"]
+
+[[experience]]
+id = "nokia"
+company = "Nokia"
+title = "Project Manager"
+location = "Tokyo"
+start = "2021-10"
+end = "2022-11"
+highlights = [
+  "Led the project for a 5G data-processing system that tracks customer usage, integrated into a Japanese telecom's billing system. The system went live in 2022 and processes half a billion user data points per day.",
+]
+skills = ["5G", "telecom", "systems integration"]
+
+[[experience]]
+id = "rakuten-dept-manager"
+company = "Rakuten Mobile"
+title = "PMO Department Manager"
+location = "Tokyo"
+start = "2020-06"
+end = "2021-10"
+highlights = [
+  "Central data center program: built a team of 30 engineers, designers, PMs and BAs focused on data center build and maintenance.",
+  "Planned and executed three new central data center builds, each including dozens of sub-projects, over a two-year program.",
+]
+skills = ["PMO", "team building", "data centers", "program management"]
+
+[[experience]]
+id = "rakuten-section-manager"
+company = "Rakuten Mobile"
+title = "PMO Section Manager"
+location = "Tokyo"
+start = "2020-01"
+end = "2020-06"
+highlights = [
+  "Edge data centers program: set up a staging hub to centrally prepare the hardware roll-out to 45 colocation data centers across Japan. Managed multiple internal and vendor teams, including 160+ team members, across software development, automation, staging and 6,000 server deployments.",
+  "Created a data center planning calculator to optimize use of rack units, compute and storage while accounting for weight, power, cable length and port limitations, with customizable templates for single-rack, full-row or whole-facility deployments and an export sheet for procurement.",
+]
+skills = ["PMO", "vendor management", "data centers", "automation", "planning tools"]
+
+[[experience]]
+id = "telus-senior"
+company = "Telus"
+title = "Senior Project Manager"
+location = "Vancouver"
+start = "2017-04"
+end = "2019-04"
+highlights = [
+  "Gigabit-speed upgrades: managed a portfolio of 124 projects, 9 project managers and a $12M budget to upgrade 40 data centers, including transport fiber, edge routers and network-core upgrades with vendor support from Nokia and Juniper.",
+  "Fiber program: program manager for 15 data center fiber capacity upgrades for new software-defined network traffic, a $12M+ program overseeing 5 project managers.",
+  "Volunteer agile coach: trained 150+ team members on the agile approach as the organization pivoted to software-based networks.",
+]
+skills = ["portfolio management", "program management", "fiber networks", "agile coaching"]
+
+[[experience]]
+id = "telus-pm"
+company = "Telus"
+title = "Project Manager"
+location = "Vancouver"
+start = "2015-08"
+end = "2017-04"
+highlights = [
+  "First Nations internet: provided internet services to a remote aboriginal community for the first time. Work included 30-meter tower construction, relocating a reflector tower to a mountain top, building equipment shelters and setting microwave dishes. Managed a $1M budget, obtained permits, managed bids and subcontracts, and delivered everything during a tight two-month Northern Canada summer.",
+]
+skills = ["construction projects", "permits", "subcontract management", "budget management"]
+
+[[experience]]
+id = "glentel"
+company = "Glentel"
+title = "Project Manager"
+location = "Vancouver"
+start = "2012-11"
+end = "2015-08"
+highlights = [
+  "Upgraded the radio system for the Canadian Parliament's police, used in 30 Parliament buildings and underground. Managed permits for work in historic buildings, security clearances, safety orientations and global logistics for multiple vendors, plus subcontracts, scheduling, budgets, reporting and contract changes on a multi-year project.",
+  "Radio and data system upgrade for Vancouver's passenger railway: delivered a new system supporting train GPS location, passenger-safety alerting and voice communications for train staff.",
+  "Police radio system: radio upgrade for a regional force used by 30 officers, dispatchers and vehicles. Guided the project from contract negotiation to completion and received a personal letter of thanks from the Chief of Police citing \"extremely well-organized & excellent service.\"",
+]
+skills = ["public sector", "radio systems", "security clearances", "contract negotiation"]
+
+[[experience]]
+id = "simply-computing"
+company = "Simply Computing"
+title = "Operations Manager"
+location = "Vancouver"
+start = "2007-10"
+end = "2011-07"
+summary = "A small business licensed to sell and service Apple products. Promoted through every role: Sales Professional (2007–2008), Assistant Manager (2008–2009), Retail Manager (2009–2010), Operations Manager (2010–2011)."
+skills = ["operations", "retail management", "customer service"]
+
+[[experience]]
+id = "jet-programme"
+company = "JET Programme"
+title = "Assistant Language Teacher"
+location = "Osaka"
+start = "2004-07"
+end = "2007-07"
+summary = "Taught English to grades 1–12 in the public school system."
+skills = ["teaching", "Japanese"]
+
+[skills]
+"Leadership" = ["coaching", "managing", "negotiating", "influencing outcomes in teams of hundreds or one-on-one"]
+"Public speaking" = ["speeches and presentations in English and Japanese to audiences of up to 1,000"]
+"Writing" = ["business cases", "executive summaries", "blog posts", "project-plan documents", "policies", "Japanese-English translation"]
+"Technology" = [
+  "Claude Code", "GitHub", "Docker", "Python", "SAP Project System", "Microsoft Project",
+  "Power Automate", "Copilot", "Planview", "Domo", "SmartSheet", "Jira", "Confluence", "Salesforce",
+  "Word", "Excel", "PowerPoint", "SharePoint", "Windows", "Mac", "Linux",
+]
+"Ways of working" = ["agile", "waterfall", "SAFe", "value streams", "portfolio governance", "KPI", "OKR"]
+
+# STAR stories. Keep ids short and unique.
+[[case_studies]]
+id = "early-voting"
+title = "Saving executives' time with Power Automate"
+situation = "Business cases were reviewed in executive meetings."
+task = "Cut executive meeting time without losing control or auditability."
+action = "Created an online business case review process in Power Automate that accepts document submissions, alerts stakeholders and creates auditable approvals, with early voting so executives can pre-read and approve in advance."
+result = "More than 50% of executive meetings eliminated."
+tags = ["Power Automate", "automation", "governance", "process redesign"]
+
+[[case_studies]]
+id = "safe-transformation"
+title = "Waterfall to value streams with Scaled Agile"
+situation = "The delivery model was waterfall-based."
+task = "Transform it to value streams to enable business agility and continuous value delivery."
+action = "As a key volunteer, identified value streams, coached agile release trains, taught certification courses and updated the governance model."
+result = "200+ people trained; governance model updated for continuous value delivery."
+tags = ["SAFe", "agile", "change management", "governance", "operating model"]
+
+[[case_studies]]
+id = "edge-rollout"
+title = "6,000 servers for the world's first cloud-native telecom launch"
+situation = "Rakuten Mobile was launching the world's first cloud-native mobile network."
+task = "Prepare and roll out hardware to 45 colocation data centers across Japan."
+action = "Set up a central staging hub, managed internal and vendor teams of 160+ people across software development, automation and staging, and built a planning calculator to optimize rack, compute, storage, power and cabling."
+result = "6,000 servers deployed across 45 colocation data centers."
+tags = ["program management", "scale", "vendor management", "telecom"]
+
+[[case_studies]]
+id = "first-nations-internet"
+title = "First internet service for a remote First Nations community"
+situation = "A remote community had no internet service, and the build season is a two-month Northern Canada summer."
+task = "Deliver connectivity within budget and that window."
+action = "Managed a $1M project: 30-meter tower construction, relocating a reflector tower to a mountain top, equipment shelters, microwave dishes, permits, bids and subcontracts."
+result = "Internet service delivered for the first time, within the summer window."
+tags = ["delivery", "community impact", "constraints", "construction"]
+
+[[case_studies]]
+id = "parliament-radio"
+title = "Radio system for the Canadian Parliament's police"
+situation = "The Parliament's police needed a new radio system across 30 historic buildings and underground."
+task = "Deliver a multi-year upgrade in heritage, high-security buildings."
+action = "Managed heritage-building permits, security clearances, safety orientations and global logistics for multiple vendors, plus subcontracts, scheduling, budgets, reporting and contract changes."
+result = "Radio system upgraded across 30 Parliament buildings."
+tags = ["public sector", "security", "stakeholder management", "delivery"]
+
+[[case_studies]]
+id = "cv-mcp"
+title = "This CV, served over MCP"
+situation = "A PDF CV shows nothing about AI-native ways of working."
+task = "Make the CV itself an AI-native artifact any agent can query."
+action = "Built a Python/FastMCP server exposing structured CV tools, a role-fit tool and case studies over Streamable HTTP, deployable to Copilot Studio or Claude as a connector, with automated tests and a testing tier before production."
+result = "Reviewers can interrogate the CV conversationally; the role-fit tool shows evidence against each criterion instead of claims."
+tags = ["MCP", "agentic AI", "generative AI", "Copilot Studio", "Python", "innovation"]
+
+[[case_studies]]
+id = "homelab-agents"
+title = "TODO: personal multi-agent platform — only if you want this public"
+situation = "TODO"
+task = "TODO"
+action = "TODO"
+result = "TODO"
+tags = ["agentic AI", "MCP", "cost control"]
+
+# The role being assessed by assess_role_fit.
+# Replace the title and criteria with those of the role being assessed.
+[target_role]
+title = "TODO: target role title"
+
+[[target_role.criteria]]
+name = "Portfolio and project management"
+keywords = ["portfolio", "program", "budget", "governance", "PMP"]
+
+[[target_role.criteria]]
+name = "Agile delivery"
+keywords = ["agile", "SAFe", "value streams", "ScrumMaster", "agile release trains"]
+
+[[target_role.criteria]]
+name = "AI and automation"
+keywords = ["Copilot", "Power Automate", "AI", "automation", "Claude Code", "MCP"]
+
+[[target_role.criteria]]
+name = "Leadership and stakeholder management"
+keywords = ["coaching", "negotiating", "stakeholders", "vendor", "trained"]
+
+[[target_role.criteria]]
+name = "Bilingual, intercultural delivery"
+keywords = ["Japanese", "English", "intercultural", "translation"]

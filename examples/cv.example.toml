@@ -1,0 +1,120 @@
+# Example CV for testing the server. Every person, company detail and number
+# here is fictional. Run with:  CV_PATH=examples/cv.example.toml python server.py
+
+[person]
+name = "Alex Morgan"
+headline = "Digital Transformation Manager | Agile delivery | Applied AI"
+location = "Tokyo, Japan"
+summary = """
+Delivery and governance leader with 12 years across telecom and financial
+services. Took a 40-team agile portfolio from quarterly to monthly releases
+and led the firm's first production generative-AI pilot from idea to
+1,200 daily users. Builds agentic tooling hands-on, so roadmaps stay grounded
+in what the technology can actually do."""
+
+[person.contact]
+email = "alex.morgan@example.com"
+linkedin = "https://www.linkedin.com/in/example-alex-morgan"
+
+[[experience]]
+id = "northbridge-transformation"
+company = "Northbridge Insurance"
+title = "Digital Transformation Manager"
+location = "Tokyo"
+start = "2021-04"
+end = "present"
+summary = "Leads portfolio governance and AI adoption across 40 agile teams."
+highlights = [
+  "Cut release cycle from quarterly to monthly across a 40-team SAFe portfolio",
+  "Led first production generative-AI pilot (claims-summary assistant) to 1,200 daily users in 5 months",
+  "Wrote the responsible AI governance policy adopted by the risk committee",
+  "Built Copilot Studio agents and Power Automate flows that removed 3,000 manual hours a year",
+]
+skills = ["SAFe", "portfolio governance", "Copilot Studio", "Power Automate", "responsible AI", "stakeholder management"]
+
+[[experience]]
+id = "kaito-mobile"
+company = "Kaito Mobile"
+title = "Senior Program Manager"
+location = "Tokyo"
+start = "2017-06"
+end = "2021-03"
+summary = "Ran the 5G core network rollout program."
+highlights = [
+  "Delivered 5G core launch on schedule with a 90-person cross-functional team",
+  "Introduced a value-tracking dashboard that redirected 15% of budget to higher-ROI work",
+]
+skills = ["program management", "telecom", "vendor management", "change management"]
+
+[[experience]]
+id = "fjordtel"
+company = "Fjordtel"
+title = "Project Manager"
+location = "Vancouver"
+start = "2013-02"
+end = "2017-05"
+highlights = [
+  "Managed retail billing platform migration for 2 million customers with zero unplanned downtime",
+]
+skills = ["project management", "migration", "risk management"]
+
+[skills]
+governance = ["portfolio governance", "SAFe", "agile", "risk management", "stakeholder management", "responsible AI"]
+ai = ["agentic AI", "MCP servers", "Copilot Studio", "Power Automate", "prompt engineering", "LLM cost routing"]
+engineering = ["Python", "Docker", "NixOS", "CI/CD", "Grafana"]
+languages = ["English (native)", "Japanese (business)"]
+
+[[case_studies]]
+id = "claims-assistant"
+title = "Generative-AI claims-summary assistant"
+situation = "Claims handlers spent about 20 minutes per file reading scanned documents before acting."
+task = "Prove generative AI could be used safely in a regulated process, within one quarter."
+action = "Ran a governed pilot: risk sign-off up front, human-in-the-loop review, weekly accuracy sampling, and a cost cap per request."
+result = "Reading time fell to 6 minutes per file; scaled to 1,200 daily users with no compliance findings."
+tags = ["generative AI", "governance", "responsible AI", "value"]
+
+[[case_studies]]
+id = "release-cadence"
+title = "Quarterly to monthly releases across 40 teams"
+situation = "Large-batch quarterly releases caused frequent rollbacks and slow feedback."
+task = "Shorten the cycle without raising operational risk."
+action = "Redesigned the PI cadence, introduced release trains with automated gates, and coached team leads through the change."
+result = "Monthly releases within two PIs; rollbacks down 60%."
+tags = ["SAFe", "change management", "portfolio governance"]
+
+[[case_studies]]
+id = "agent-homelab"
+title = "Personal multi-agent platform"
+situation = "Wanted first-hand experience of agentic AI beyond vendor demos."
+task = "Run several agents on self-hosted infrastructure, safely and cheaply."
+action = "Deployed agent harnesses on NixOS with MCP servers for internal data, secrets management, and routing of routine work to cheaper models."
+result = "Cut model spend by about 70% versus a single premium model; the same governance patterns now inform workplace AI policy."
+tags = ["agentic AI", "MCP", "cost control", "governance"]
+
+[target_role]
+title = "Head of Digital Delivery"
+
+[[target_role.criteria]]
+name = "AI strategy & roadmap"
+keywords = ["AI", "roadmap", "strategy", "agentic", "transformation"]
+
+[[target_role.criteria]]
+name = "Governance & responsible AI"
+keywords = ["governance", "risk", "responsible", "policy", "compliance"]
+
+[[target_role.criteria]]
+name = "Hands-on technical credibility"
+keywords = ["MCP", "Python", "agent", "Copilot Studio", "Power Automate", "Docker"]
+
+[[target_role.criteria]]
+name = "Change leadership at scale"
+keywords = ["SAFe", "agile", "stakeholder", "change", "portfolio", "cross-functional"]
+
+[[target_role.criteria]]
+name = "Value & cost discipline"
+keywords = ["cost", "value", "ROI", "budget", "hours"]
+
+# Deliberately unmet, to check that gaps are reported rather than hidden.
+[[target_role.criteria]]
+name = "Data platform ownership"
+keywords = ["data lake", "Snowflake", "Databricks", "data platform"]
