@@ -1,0 +1,55 @@
+# Accepted Trivy findings for the cv-mcp image (ci.yaml and release.yaml scan with this file).
+#
+# Every entry is a package that comes from nixpkgs (nixos-26.05), not from
+# nix/python-packages.nix. Upgrading it here would mean overriding it in the Python set,
+# which rebuilds everything that depends on it on the Pi (CLAUDE.md: cache hits only), so
+# the fix arrives with the next `nix flake update` of the channel instead. Trivy reads the
+# upstream version from METADATA and cannot see patches nixpkgs backports.
+#
+# Each entry expires after a month, so the scan fails again and the list gets re-checked
+# against a fresh `nix flake update`. Never add a package that nix/python-packages.nix
+# provides: bump the wheel instead.
+#
+# Exposure, for the record: the server is read-only, parses no forms or multipart bodies,
+# makes no outbound HTTP calls at runtime, and sits behind nginx (testing) or the Azure
+# ingress (production), which terminate TLS.
+vulnerabilities:
+  - id: CVE-2026-111064
+    statement: aiohttp (via nixpkgs truststore); not used as a server or client by cv-mcp
+    expired_at: 2026-11-22
+  - id: CVE-2026-111066
+    statement: aiohttp multipart; not used by cv-mcp
+    expired_at: 2026-11-22
+  - id: CVE-2026-69244
+    statement: aiohttp client response parsing; cv-mcp makes no outbound requests
+    expired_at: 2026-11-22
+  - id: GHSA-2g87-pp6c-29x5
+    statement: aiohttp; not used by cv-mcp
+    expired_at: 2026-11-22
+  - id: CVE-2026-63374
+    statement: anyio TLS client hostname check; cv-mcp opens no TLS client connections
+    expired_at: 2026-11-22
+  - id: GHSA-6q48-6c7w-9gw2
+    statement: nixpkgs certifi is patched to use the nss-cacert bundle, not its own cacert.pem
+    expired_at: 2026-11-22
+  - id: GHSA-537c-gmf6-5ccf
+    statement: concerns OpenSSL bundled in PyPI cryptography wheels; nixpkgs links its own OpenSSL
+    expired_at: 2026-11-22
+  - id: CVE-2026-69247
+    statement: cryptography PKCS#7 decryption; not used by cv-mcp
+    expired_at: 2026-11-22
+  - id: CVE-2026-69249
+    statement: cryptography X.509 path building; cv-mcp verifies no certificates
+    expired_at: 2026-11-22
+  - id: CVE-2026-53539
+    statement: python-multipart form parsing; cv-mcp parses no forms
+    expired_at: 2026-11-22
+  - id: CVE-2026-54283
+    statement: starlette request.form(); cv-mcp never calls it
+    expired_at: 2026-11-22
+  - id: CVE-2026-97687
+    statement: urllib3 via HTTPS proxy; cv-mcp makes no outbound requests
+    expired_at: 2026-11-22
+  - id: CVE-2026-97689
+    statement: urllib3 client chunk parser; cv-mcp makes no outbound requests
+    expired_at: 2026-11-22

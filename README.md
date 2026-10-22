@@ -44,8 +44,11 @@ caller supplies none; they deliberately name no specific role.
 
 ## Run locally
 
+Everything comes from the Nix flake (`nix develop` for a shell with Python,
+FastMCP and pytest; `nix run` to start the server):
+
 ```bash
-pip install -r requirements.txt
+nix develop
 python server.py                                     # http://localhost:8000/mcp
 CV_PATH=examples/cv.example.toml python server.py    # fictional example CV
 CV_MCP_CONTROL_TOKEN=dev python server.py            # also serves /control/mcp
@@ -62,15 +65,16 @@ CV_TRANSPORT=stdio python server.py                  # stdio, for local clients
 ## Test
 
 ```bash
-pip install pytest
-pytest
+nix develop -c pytest      # interactive
+nix flake check            # what CI runs: the suite as a Nix build
 ```
 
 ## Deploy
 
-Testing runs on the Pi; production runs on Azure Container Apps. See
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). The Nix flake that replaces
-`requirements.txt` and the Dockerfile is milestone M3.
+Testing runs on the Pi; production runs on Azure Container Apps. The image is
+built by the flake (`nix build .#image`, no Dockerfile). Pipeline, tiers,
+secrets and runbook: [PIPELINE.md](PIPELINE.md); design:
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Connect
 

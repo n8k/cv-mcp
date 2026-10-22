@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "project_name": "cv-mcp",
+  "skeleton": {
+    "docs_sha256": {
+      "ARCHITECTURE.md": "5006f7dbc823cdcb3d01713bf9d6d75349897374c85f85cf4f50ed725e5edbcb",
+      "PROJECT.md": "4bb09009a266f7b87b05524e271bf3c2f4fdb5ad5a7ecfe290ca90f1e976cb6a"
+    },
+    "apps": [
+      {"name": "cv-mcp", "language": "python", "image": true, "reason": "needs FastMCP"}
+    ],
+    "extra_dirs": [],
+    "track_top": []
+  },
+  "language": "python",
+  "language_reason": "needs FastMCP",
+  "toolchain": "nix",
+  "ci_shell": "ci",
+  "lint_cmd": "ruff check . && nixfmt --check flake.nix nix/python-packages.nix",
+  "test_cmd": "nix flake check",
+  "build_cmd": "nix build .#cv-mcp",
+  "image_attr": "image",
+  "package_manager": "nix (wheels for missing PyPI packages in nix/python-packages.nix)",
+  "artifact_path": "result/",
+  "env_tiers": ["testing", "production"],
+  "deploy_method": "compose",
+  "registry_url": "gitea.local",
+  "image_scan": true,
+  "secrets": [
+    "CV_MCP_CONTROL_TOKEN",
+    "CI_REGISTRY_USER",
+    "CI_REGISTRY_PASSWORD",
+    "GHCR_TOKEN",
+    "AZURE_CLIENT_ID",
+    "AZURE_TENANT_ID",
+    "AZURE_CLIENT_SECRET",
+    "AZURE_SUBSCRIPTION_ID"
+  ],
+  "health_url": {
+    "testing": "http://127.0.0.1:8250/health",
+    "production": "https://<azure fqdn>/health"
+  },
+  "branch_strategy": "trunk",
+  "triggers": ["push", "pull_request", "manual", "deployment"],
+  "rollback_strategy": "redeploy-previous-sha",
+  "containers": [
+    {
+      "name": "cv-mcp-testing",
+      "image": "gitea.local/nate/cv-mcp",
+      "ports": [8250],
+      "env": {},
+      "secret_env": ["CV_MCP_CONTROL_TOKEN"],
+      "volumes": [],
+      "depends_on": [],
+      "host": "testing"
+    }
+  ]
+}
