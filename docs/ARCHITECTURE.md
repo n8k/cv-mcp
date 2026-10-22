@@ -1,6 +1,6 @@
 # cv-mcp — Architecture
 
-Status: Draft
+Status: Approved 2026-10-22
 
 ## Overview
 
