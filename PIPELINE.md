@@ -83,8 +83,8 @@ Fill in after each deploy (the SHA is also the image tag).
 
 | Tier | Where | Image | Deployed SHA | Date |
 |---|---|---|---|---|
-| testing | Pi, `/opt/cicd/cv-mcp/testing`, port 8250 | `gitea.local/nate/cv-mcp:<sha>` | `b7f7837075e89c2c591c38930cfefa7f864165e0` (main after #5) | 2026-10-23 |
-| production | Pi, `/opt/cicd/cv-mcp/production`, port 8251 | `gitea.local/nate/cv-mcp:<sha>` | `b7f7837075e89c2c591c38930cfefa7f864165e0` (first promotion) | 2026-10-23 |
+| testing | Pi, `/opt/cicd/cv-mcp/testing`, port 8250 | `gitea.local/nate/cv-mcp:<sha>` | `f5fae67f9e7f2cd9d94bf05c15afa864c0b77e8b` (main after #8) | 2026-10-23 |
+| production | Pi, `/opt/cicd/cv-mcp/production`, port 8251 | `gitea.local/nate/cv-mcp:<sha>` | `f5fae67f9e7f2cd9d94bf05c15afa864c0b77e8b` (main after #8: new CV content, case studies in `cv://markdown`) | 2026-10-23 |
 
 Which commit is running: `cat /opt/cicd/cv-mcp/<tier>/release.env` on the Pi.
 

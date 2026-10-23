@@ -18,9 +18,11 @@ Environment
 from __future__ import annotations
 
 import hmac
+import html
 import json
 import os
 import re
+import string
 import tomllib
 from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
@@ -30,7 +32,7 @@ from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import JSONResponse, PlainTextResponse
+from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from starlette.routing import Mount
 from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -351,8 +353,48 @@ async def health(_: Request) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
+INDEX_TEMPLATE = Path(__file__).with_name("index.html")
+
+# The page is static apart from the escaped CV fields: inline style and script only,
+# nothing loaded from elsewhere, no framing.
+INDEX_CSP = (
+    "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
+    "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+)
+
+
+def _mcp_url(request: Request) -> str:
+    """Public /mcp URL as the visitor reached it. Both tiers are HTTPS (Cloudflare,
+    nginx); only a local run is plain HTTP."""
+    host = request.headers.get("host", "localhost")
+    local = host.split(":")[0] in ("localhost", "127.0.0.1")
+    return f"{'http' if local else 'https'}://{host}/mcp"
+
+
+def render_index(mcp_url: str) -> str:
+    try:
+        person = _clean(load_cv()).get("person", {})
+    except Exception:  # noqa: BLE001 — a broken file shows in /health, not here
+        person = {}
+    name = person.get("name") or "the candidate"
+    linkedin = person.get("contact", {}).get("linkedin", "")
+    if not linkedin.startswith("https://"):
+        linkedin = ""
+    esc = html.escape
+    return string.Template(INDEX_TEMPLATE.read_text(encoding="utf-8")).substitute(
+        name=esc(name),
+        first_name=esc(name.split()[0]),
+        headline=esc(person.get("headline", "")),
+        mcp_url=esc(mcp_url),
+        linkedin=f' · <a href="{esc(linkedin)}" rel="noopener">LinkedIn</a>' if linkedin else "",
+    )
+
+
 @mcp.custom_route("/", methods=["GET"])
-async def index(_: Request) -> PlainTextResponse:
+async def index(request: Request) -> Response:
+    """Landing page for browsers; a one-line pointer for anything else (curl, probes)."""
+    if "text/html" in request.headers.get("accept", ""):
+        return HTMLResponse(render_index(_mcp_url(request)), headers={"Content-Security-Policy": INDEX_CSP})
     return PlainTextResponse(
         f"{_candidate_name()} — CV as an MCP server.\n"
         "Add this server's /mcp URL as a connector in Copilot Studio or Claude, then ask about the CV.\n"

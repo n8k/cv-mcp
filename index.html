@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="$name's CV as an MCP server: connect it to Claude or Copilot Studio and ask about experience, case studies and role fit.">
+<title>$name · CV as an MCP server</title>
+<style>
+  :root {
+    --bg: #13111c;
+    --bg-glow: #1c1730;
+    --surface: #1b1829;
+    --surface-2: #231f36;
+    --border: #322b4d;
+    --text: #e8e4f3;
+    --muted: #a7a0c2;
+    --violet: #b9a5f7;
+    --indigo: #8f9cf5;
+    --lavender: #d6c9ff;
+    --sage: #9fd8c3;
+    --peach: #f2c09b;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
+    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    background:
+      radial-gradient(60rem 30rem at 15% -10%, rgba(143, 156, 245, 0.16), transparent 70%),
+      radial-gradient(50rem 30rem at 95% 0%, rgba(185, 165, 247, 0.14), transparent 70%),
+      var(--bg);
+  }
+  main { max-width: 60rem; margin: 0 auto; padding: 3.5rem 1.25rem 4rem; }
+  a { color: var(--lavender); text-underline-offset: 3px; }
+  a:hover { color: #fff; }
+  h1, h2, h3 { line-height: 1.25; margin: 0; }
+
+  header { margin-bottom: 2.5rem; }
+  .eyebrow {
+    display: inline-block; margin-bottom: 1rem; padding: 0.25rem 0.75rem;
+    border: 1px solid var(--border); border-radius: 999px;
+    color: var(--sage); font-size: 0.85rem; letter-spacing: 0.02em;
+    background: rgba(159, 216, 195, 0.06);
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3rem); font-weight: 700;
+    background: linear-gradient(90deg, var(--lavender), var(--violet) 45%, var(--indigo));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .headline { margin: 0.5rem 0 0; color: var(--muted); font-size: 1.1rem; }
+  .lead { margin: 1.5rem 0 0; max-width: 42rem; font-size: 1.05rem; }
+
+  .url-card {
+    margin: 2rem 0 0; padding: 1.25rem 1.25rem 1rem;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: linear-gradient(135deg, rgba(143, 156, 245, 0.12), rgba(185, 165, 247, 0.08)), var(--surface);
+  }
+  .url-card label { display: block; color: var(--muted); font-size: 0.85rem; margin-bottom: 0.5rem; }
+  .url-row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+  code, .url {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .url {
+    flex: 1 1 16rem; padding: 0.7rem 0.9rem; border-radius: 10px;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--lavender); font-size: 1rem; overflow-wrap: anywhere;
+  }
+  .note { margin: 0.75rem 0 0; color: var(--muted); font-size: 0.9rem; }
+
+  button.copy {
+    cursor: pointer; padding: 0.65rem 1rem; border-radius: 10px;
+    border: 1px solid rgba(185, 165, 247, 0.45);
+    background: rgba(185, 165, 247, 0.14); color: var(--lavender);
+    font: inherit; font-size: 0.9rem; transition: background 0.2s, border-color 0.2s;
+  }
+  button.copy:hover { background: rgba(185, 165, 247, 0.24); }
+  button.copy:focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; }
+  button.copy.done { border-color: rgba(159, 216, 195, 0.6); color: var(--sage); background: rgba(159, 216, 195, 0.12); }
+
+  section { margin-top: 3rem; }
+  h2 { font-size: 1.35rem; margin-bottom: 1rem; color: var(--lavender); }
+  .grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+  .card {
+    padding: 1.4rem; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--surface);
+  }
+  .card h3 { font-size: 1.1rem; margin-bottom: 0.25rem; }
+  .card .for { color: var(--muted); font-size: 0.9rem; margin: 0 0 1rem; }
+  .card.claude h3 { color: var(--violet); }
+  .card.copilot h3 { color: var(--indigo); }
+  ol { margin: 0; padding-left: 1.25rem; }
+  ol li { margin: 0.4rem 0; }
+  ol li::marker { color: var(--violet); font-weight: 600; }
+  .card.copilot ol li::marker { color: var(--indigo); }
+  .path { color: var(--peach); }
+  .caveat { margin: 1rem 0 0; color: var(--muted); font-size: 0.85rem; }
+
+  .prompts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
+  .prompts li {
+    display: flex; gap: 0.75rem; align-items: flex-start; justify-content: space-between;
+    padding: 0.9rem 1rem; border-radius: 12px;
+    background: var(--surface-2); border: 1px solid var(--border);
+  }
+  .prompts li span { flex: 1; }
+  .prompts li span::before { content: "\201C"; color: var(--violet); }
+  .prompts li span::after { content: "\201D"; color: var(--violet); }
+  .prompts button.copy { flex: none; padding: 0.35rem 0.7rem; font-size: 0.8rem; }
+  .tip {
+    margin: 1rem 0 0; padding: 0.8rem 1rem; border-radius: 12px;
+    border-left: 3px solid var(--sage); background: rgba(159, 216, 195, 0.06);
+    color: var(--muted); font-size: 0.92rem;
+  }
+
+  .tools { display: grid; gap: 0.6rem 1.5rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); margin: 0; }
+  .tools div { padding: 0.2rem 0; }
+  .tools dt { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--indigo); font-size: 0.92rem; }
+  .tools dd { margin: 0.1rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+  footer {
+    margin-top: 3.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 0.9rem; display: flex; gap: 1rem; flex-wrap: wrap; justify-content: space-between;
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="eyebrow">CV as a Model Context Protocol server</span>
+    <h1>$name</h1>
+    <p class="headline">$headline</p>
+    <p class="lead">
+      This CV is a live, read-only MCP server. Connect it to your AI assistant and ask it
+      anything: experience, case studies, or how well it fits your role. Every answer is
+      grounded in the CV itself, and gaps are shown rather than hidden.
+    </p>
+    <div class="url-card">
+      <label for="mcp-url">Server URL</label>
+      <div class="url-row">
+        <code class="url" id="mcp-url">$mcp_url</code>
+        <button class="copy" type="button" data-copy="$mcp_url">Copy URL</button>
+      </div>
+      <p class="note">No sign-in or API key. Read-only: the tools can't change anything.</p>
+    </div>
+  </header>
+
+  <section aria-labelledby="connect">
+    <h2 id="connect">Connect it</h2>
+    <div class="grid">
+      <article class="card claude">
+        <h3>Claude</h3>
+        <p class="for">claude.ai on the web or the desktop app</p>
+        <ol>
+          <li>Open <span class="path">Settings → Connectors</span> and choose <span class="path">Add custom connector</span>.</li>
+          <li>Give it a name (for example <code>CV-MCP</code>), paste the server URL, and leave the authentication fields empty.</li>
+          <li>Start a new chat, open the tools menu under the message box, and switch the connector on.</li>
+          <li>Ask a question. Claude asks before its first tool call; every tool is read-only, so "Always allow" is safe.</li>
+        </ol>
+        <p class="caveat">On Team and Enterprise plans an owner may need to allow custom connectors first.</p>
+      </article>
+      <article class="card copilot">
+        <h3>Microsoft Copilot Studio</h3>
+        <p class="for">for an agent in your organisation's tenant</p>
+        <ol>
+          <li>Open your agent and go to <span class="path">Tools → Add a tool</span>.</li>
+          <li>Choose <span class="path">Model Context Protocol</span> and paste the server URL.</li>
+          <li>Set authentication to <span class="path">None</span>, then save and add the tool to the agent.</li>
+          <li>Test it in the agent's test pane with one of the prompts below.</li>
+        </ol>
+        <p class="caveat">Menu names can differ by version, and some tenants block external MCP servers. If yours does, a live demo in Claude works just as well.</p>
+      </article>
+    </div>
+  </section>
+
+  <section aria-labelledby="prompts">
+    <h2 id="prompts">Try asking</h2>
+    <ul class="prompts">
+      <li><span>Introduce $first_name in a short paragraph, then list the case studies with one line each.</span><button class="copy" type="button">Copy</button></li>
+      <li><span>Tell me, in STAR format, about a time $first_name changed how an organisation works.</span><button class="copy" type="button">Copy</button></li>
+      <li><span>Give me a STAR example of $first_name using AI or automation to save leadership time.</span><button class="copy" type="button">Copy</button></li>
+      <li><span>Walk me through the largest delivery programme as Situation, Task, Action and Result.</span><button class="copy" type="button">Copy</button></li>
+      <li><span>Here is our job description: [paste it]. Assess the fit criterion by criterion, back up each strong rating with the most relevant case study, and show the gaps.</span><button class="copy" type="button">Copy</button></li>
+      <li><span>Using the CV tools only, write three behavioural interview questions for this role, each tied to one of the case studies.</span><button class="copy" type="button">Copy</button></li>
+    </ul>
+    <p class="tip">Start a fresh chat with the connector on. Asking for examples, stories or "STAR" brings in the full case studies; adding "use the CV tools" keeps answers grounded in the CV.</p>
+  </section>
+
+  <section aria-labelledby="inside">
+    <h2 id="inside">What the server offers</h2>
+    <dl class="tools">
+      <div><dt>get_profile</dt><dd>Headline, summary, highlights, certifications, contact</dd></div>
+      <div><dt>get_experience</dt><dd>Work history, optionally by company</dd></div>
+      <div><dt>get_skills</dt><dd>Skills by category</dd></div>
+      <div><dt>list_case_studies · get_case_study</dt><dd>STAR stories: situation, task, action, result</dd></div>
+      <div><dt>search_cv</dt><dd>Whole-word search across everything</dd></div>
+      <div><dt>assess_role_fit</dt><dd>Evidence for each of your role's criteria: strong, partial or gap</dd></div>
+      <div><dt>interview_candidate</dt><dd>A ready-made screening prompt for your job description</dd></div>
+      <div><dt>cv://markdown</dt><dd>The whole CV, case studies included, as one document</dd></div>
+    </dl>
+  </section>
+
+  <footer>
+    <span>$name$linkedin</span>
+    <span>Served from a Raspberry Pi through a Cloudflare Tunnel</span>
+  </footer>
+</main>
+<script>
+  document.querySelectorAll("button.copy").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var text = button.dataset.copy || button.parentElement.querySelector("span").textContent;
+      var label = button.textContent;
+      navigator.clipboard.writeText(text).then(function () {
+        button.textContent = "Copied";
+        button.classList.add("done");
+        setTimeout(function () { button.textContent = label; button.classList.remove("done"); }, 1600);
+      });
+    });
+  });
+</script>
+</body>
+</html>
