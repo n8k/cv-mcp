@@ -1,26 +1,24 @@
-# release.yaml — promote a commit to production (Azure Container Apps).
+# release.yaml — promote a commit to production (on the Pi, public at https://n8k.org).
 #
 # Runs only on a Woodpecker deployment event to `production`: a human opens the
 # pipeline of a commit that passed ci.yaml and cd.yaml and chooses Promote →
 # production (or `woodpecker-cli pipeline deploy nate/cv-mcp <number> production`).
 # That promotion is the approval; nothing reaches production on push.
 #
-#   image    build the x86_64 image for the promoted commit (skipped when GHCR already
-#            has that SHA, i.e. a rollback)
-#   scan     Trivy, same gate and ignore file as ci.yaml
-#   publish  push ghcr.io/n8k/cv-mcp:<sha> and move `production` to it
-#   deploy   az containerapp update --image ghcr.io/n8k/cv-mcp:<sha>
-#   verify   public https://<fqdn>/health (allows for a cold start from zero)
+# Production runs the exact image testing ran and ci.yaml scanned:
+# gitea.local/nate/cv-mcp:<sha>. Nothing is rebuilt.
 #
-# The Pi is aarch64. `image` needs an x86_64 builder on the host nix-daemon (NixyBookPro
-# as a remote builder, ARCHITECTURE.md); without one this step fails with
-# "required system or feature not available". See PIPELINE.md, Pre-flight.
+#   check    the commit is on main and its image exists in the registry
+#   tag      move the `production` tag to that digest (a label; deploys use the SHA)
+#   deploy   write compose.yaml and release.env into /opt/cicd/cv-mcp/production/;
+#            cv-mcp-production-deploy.path (NixOS config) runs `docker compose up --wait`
+#   verify   https://n8k.org/health through Cloudflare and the tunnel, twice in a row
 #
-# Rollback: promote the older commit's pipeline to production. Its image is already in
-# GHCR, so nothing is rebuilt; deploy just points the app back at that tag.
+# Rollback: promote the older commit's pipeline to production. It writes that commit's
+# SHA tag; nothing is rebuilt.
 #
-# Repo secrets (Woodpecker, names only): ghcr_token, azure_client_id, azure_tenant_id,
-# azure_client_secret, azure_subscription_id. Needs the repo Trusted (network + volumes).
+# Uses only the global registry secrets (ci_registry_user, ci_registry_password).
+# Needs the repo Trusted (network + volumes).
 
 when:
   - event: deployment
@@ -45,95 +43,65 @@ variables:
     volumes:
       - /nix:/nix:ro
     environment: *nix_env
-  # Not secrets: where the app lives. Created once by hand (PIPELINE.md, Production setup).
-  - &azure_app
-    AZURE_RESOURCE_GROUP: cv-mcp
-    AZURE_CONTAINERAPP: cv-mcp
-  - &ghcr
-    GHCR_USER: n8k
-    GHCR_TOKEN:
-      from_secret: ghcr_token
+  - &registry
+    REGISTRY_USER:
+      from_secret: ci_registry_user
+    REGISTRY_PASSWORD:
+      from_secret: ci_registry_password
 
 steps:
-  - name: image
+  - name: check
     <<: *host_nix
+    extra_hosts:
+      - "gitea.local:host-gateway"
     environment:
-      <<: [*nix_env, *ghcr]
+      <<: [*nix_env, *registry]
     commands:
       # Only commits on main reach production.
       - '[ "${CI_COMMIT_BRANCH}" = main ] || { echo "refusing to promote branch ${CI_COMMIT_BRANCH}"; exit 1; }'
-      - |
-        if nix develop .#ci -c skopeo --insecure-policy inspect --creds "$GHCR_USER:$GHCR_TOKEN" \
-             docker://ghcr.io/n8k/cv-mcp:${CI_COMMIT_SHA} > /dev/null 2>&1; then
-          echo "ghcr.io/n8k/cv-mcp:${CI_COMMIT_SHA} already published: rollback, not rebuilding"
-          touch .already-published
-        else
-          "$(nix build --no-link --print-out-paths .#packages.x86_64-linux.image)" > image-amd64.tar
-        fi
+      # ci.yaml published this SHA only if lint, test and scan passed.
+      - >-
+        nix develop .#ci -c skopeo --insecure-policy inspect
+        --creds "$REGISTRY_USER:$REGISTRY_PASSWORD" --format '{{.Digest}}'
+        docker://gitea.local/nate/cv-mcp:${CI_COMMIT_SHA}
 
-  - name: scan
+  - name: tag
     <<: *host_nix
-    commands:
-      - |
-        [ -e .already-published ] && { echo "already scanned when first published"; exit 0; }
-        nix develop .#ci -c trivy image --input image-amd64.tar --ignorefile .trivyignore.yaml \
-          --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress
-
-  - name: publish
-    <<: *host_nix
+    extra_hosts:
+      - "gitea.local:host-gateway"
     environment:
-      <<: [*nix_env, *ghcr]
+      <<: [*nix_env, *registry]
     commands:
-      - |
-        creds="$GHCR_USER:$GHCR_TOKEN"
-        if [ ! -e .already-published ]; then
-          nix develop .#ci -c skopeo --insecure-policy copy --dest-creds "$creds" \
-            docker-archive:image-amd64.tar docker://ghcr.io/n8k/cv-mcp:${CI_COMMIT_SHA}
-        fi
-        # Mutable tier tag, same digest. Azure always runs the SHA tag.
-        nix develop .#ci -c skopeo --insecure-policy copy --src-creds "$creds" --dest-creds "$creds" \
-          docker://ghcr.io/n8k/cv-mcp:${CI_COMMIT_SHA} docker://ghcr.io/n8k/cv-mcp:production
+      - >-
+        nix develop .#ci -c skopeo --insecure-policy copy
+        --src-creds "$REGISTRY_USER:$REGISTRY_PASSWORD" --dest-creds "$REGISTRY_USER:$REGISTRY_PASSWORD"
+        docker://gitea.local/nate/cv-mcp:${CI_COMMIT_SHA} docker://gitea.local/nate/cv-mcp:production
 
   - name: deploy
-    <<: *host_nix
-    environment:
-      <<: [*nix_env, *azure_app]
-      AZURE_CLIENT_ID:
-        from_secret: azure_client_id
-      AZURE_TENANT_ID:
-        from_secret: azure_tenant_id
-      AZURE_CLIENT_SECRET:
-        from_secret: azure_client_secret
-      AZURE_SUBSCRIPTION_ID:
-        from_secret: azure_subscription_id
+    image: alpine:3.22
+    volumes:
+      - /opt/cicd/cv-mcp/production:/deploy
     commands:
-      - |
-        nix develop .#deploy -c sh -c '
-          set -e
-          export AZURE_CONFIG_DIR=$PWD/.azure AZURE_CORE_COLLECT_TELEMETRY=false
-          az login --service-principal --username "$AZURE_CLIENT_ID" \
-            --password "$AZURE_CLIENT_SECRET" --tenant "$AZURE_TENANT_ID" --output none
-          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-          az containerapp update --name "$AZURE_CONTAINERAPP" \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --image ghcr.io/n8k/cv-mcp:${CI_COMMIT_SHA} --output none
-          az containerapp show --name "$AZURE_CONTAINERAPP" \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --query properties.configuration.ingress.fqdn --output tsv > .fqdn
-          az logout
-          rm -rf .azure'
-      - echo "production is https://$(cat .fqdn)"
+      - cp deploy/compose.yaml /deploy/compose.yaml
+      # Written then renamed, so the path unit never sees a half-written file.
+      - printf 'APP_IMAGE=gitea.local/nate/cv-mcp:%s\n' "${CI_COMMIT_SHA}" > /deploy/release.env.tmp
+      - mv /deploy/release.env.tmp /deploy/release.env
+      - cat /deploy/release.env
 
   - name: verify
     <<: *host_nix
     commands:
-      # Scale-to-zero: the first request starts a replica, so allow about two minutes.
+      # The deploy unit waits up to 180 s for the container's health check. Require two
+      # healthy answers in a row from the public URL (the old container may still answer
+      # for a moment while compose swaps them).
       - |
         nix develop .#ci -c sh -c '
-          url="https://$(cat .fqdn)/health"
-          for i in $(seq 1 24); do
-            curl -fsS --max-time 20 "$url" && exit 0
+          ok=0
+          for i in $(seq 1 40); do
+            if curl -fsS --max-time 10 https://n8k.org/health; then
+              ok=$((ok + 1)); [ "$ok" -ge 2 ] && exit 0
+            else ok=0; fi
             sleep 5
           done
-          echo "$url not healthy after promotion" >&2
+          echo "https://n8k.org/health not healthy after promotion" >&2
           exit 1'

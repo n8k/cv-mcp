@@ -71,7 +71,8 @@ nix flake check            # what CI runs: the suite as a Nix build
 
 ## Deploy
 
-Testing runs on the Pi; production runs on Azure Container Apps. The image is
+Both tiers run on the Pi from the same image: testing on the home network, and
+production publicly at `https://n8k.org` through a Cloudflare Tunnel. The image is
 built by the flake (`nix build .#image`, no Dockerfile). Pipeline, tiers,
 secrets and runbook: [PIPELINE.md](PIPELINE.md); design:
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -80,5 +81,5 @@ secrets and runbook: [PIPELINE.md](PIPELINE.md); design:
 
 Unverified — confirm these menu names during milestone M6:
 
-- **Copilot Studio:** agent → Tools → Add a tool → Model Context Protocol → server URL `https://<host>/mcp`, no auth.
+- **Copilot Studio:** agent → Tools → Add a tool → Model Context Protocol → server URL `https://n8k.org/mcp`, no auth.
 - **Claude:** Settings → Connectors → Add custom connector → same URL.

@@ -3,8 +3,8 @@
   "project_name": "cv-mcp",
   "skeleton": {
     "docs_sha256": {
-      "ARCHITECTURE.md": "5006f7dbc823cdcb3d01713bf9d6d75349897374c85f85cf4f50ed725e5edbcb",
-      "PROJECT.md": "4bb09009a266f7b87b05524e271bf3c2f4fdb5ad5a7ecfe290ca90f1e976cb6a"
+      "ARCHITECTURE.md": "98d28f373bfdc5941fdd36433e8c7a4e4126fb09eecb048cd62f240c1fa4eb46",
+      "PROJECT.md": "6d57ea5518ce7efa2c6746842422d477d66c8cca58b6316e67d097054f8b6b72"
     },
     "apps": [
       {"name": "cv-mcp", "language": "python", "image": true, "reason": "needs FastMCP"}
@@ -22,37 +22,61 @@
   "image_attr": "image",
   "package_manager": "nix (wheels for missing PyPI packages in nix/python-packages.nix)",
   "artifact_path": "result/",
-  "env_tiers": ["testing", "production"],
+  "env_tiers": [
+    "testing",
+    "production"
+  ],
   "deploy_method": "compose",
   "registry_url": "gitea.local",
   "image_scan": true,
   "secrets": [
     "CV_MCP_CONTROL_TOKEN",
+    "CLOUDFLARED_TUNNEL_CREDENTIALS",
     "CI_REGISTRY_USER",
-    "CI_REGISTRY_PASSWORD",
-    "GHCR_TOKEN",
-    "AZURE_CLIENT_ID",
-    "AZURE_TENANT_ID",
-    "AZURE_CLIENT_SECRET",
-    "AZURE_SUBSCRIPTION_ID"
+    "CI_REGISTRY_PASSWORD"
   ],
   "health_url": {
     "testing": "http://127.0.0.1:8250/health",
-    "production": "https://<azure fqdn>/health"
+    "production": "http://127.0.0.1:8251/health"
   },
   "branch_strategy": "trunk",
-  "triggers": ["push", "pull_request", "manual", "deployment"],
+  "triggers": [
+    "push",
+    "pull_request",
+    "manual",
+    "deployment"
+  ],
   "rollback_strategy": "redeploy-previous-sha",
   "containers": [
     {
       "name": "cv-mcp-testing",
       "image": "gitea.local/nate/cv-mcp",
-      "ports": [8250],
-      "env": {},
-      "secret_env": ["CV_MCP_CONTROL_TOKEN"],
+      "ports": [
+        8250
+      ],
+      "env": {
+        "APP_TIER": "testing"
+      },
+      "secret_env": [
+        "CV_MCP_CONTROL_TOKEN"
+      ],
       "volumes": [],
       "depends_on": [],
       "host": "testing"
+    },
+    {
+      "name": "cv-mcp-production",
+      "image": "gitea.local/nate/cv-mcp",
+      "ports": [
+        8251
+      ],
+      "env": {
+        "APP_TIER": "production"
+      },
+      "secret_env": [],
+      "volumes": [],
+      "depends_on": [],
+      "host": "production"
     }
   ]
 }

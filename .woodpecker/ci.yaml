@@ -12,7 +12,8 @@
 #   publish  push gitea.local/nate/cv-mcp:<sha>, then move the `testing` tag to it
 #
 # image/scan/publish run on main only; pull requests stop after test.
-# Production (x86_64, Azure) is release.yaml, started by a human promotion.
+# Production (same image, public at https://n8k.org) is release.yaml, started by a human
+# promotion.
 
 when:
   - event: [push, manual]

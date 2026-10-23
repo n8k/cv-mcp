@@ -1,39 +1,39 @@
 # cv-mcp: pipeline
 
 Generated with the pipeline-factory skill from `docs/PROJECT.md` and
-`docs/ARCHITECTURE.md` (both approved 2026-10-22; hashes in `intake.json`). The
-skill's renderer is not shipped yet, so the files were written by hand to its
-spec. Review before the first run.
+`docs/ARCHITECTURE.md` (approved 2026-10-22, revised 2026-10-23 for production on
+the Pi; hashes in `intake.json`). The skill's renderer is not shipped yet, so the
+files were written by hand to its spec.
 
 | | |
 |---|---|
 | Project | `cv-mcp` |
 | Repos | GitHub `n8k/cv-mcp`, Gitea `nate/cv-mcp` (what Woodpecker builds) |
 | App | `cv-mcp`, Python, Tier 2. Reason: needs FastMCP (PROJECT.md `## Apps`) |
-| Toolchain | Nix: `devShells.{default,ci,deploy}`, `packages.{cv-mcp,image}`, `checks.tests` |
+| Toolchain | Nix: `devShells.{default,ci}`, `packages.{cv-mcp,image}`, `checks.tests` |
 | Branching | trunk (`main`) |
-| Tiers | testing (Pi, docker compose), production (Azure Container Apps). No staging |
+| Tiers | testing and production, both on the Pi (docker compose), from the same aarch64 image. Production is public at `https://n8k.org` through a Cloudflare Tunnel. No staging |
 | Host module | NixOS config repo: `hosts/nixos/projects/cv-mcp-pipeline.nix`, `modules/domains/cv-mcp-domains.nix` |
 
 ## Flow
 
 ```
 push to main ─► ci.yaml ─► cd.yaml ──────────────► testing (Pi, https://cv-mcp.local)
-                lint        writes release.env
+                lint        writes testing/release.env
                 test        verify /health
                 image (aarch64)
                 scan
                 publish gitea.local/nate/cv-mcp:<sha>, :testing
 
-human: Promote → production ─► release.yaml ─────► production (Azure, https://<fqdn>)
-                               image (x86_64)
-                               scan
-                               publish ghcr.io/n8k/cv-mcp:<sha>, :production
-                               az containerapp update
-                               verify /health
+human: Promote → production ─► release.yaml ────► production (Pi, https://n8k.org)
+                               check (main, image exists)
+                               tag :production
+                               writes production/release.env
+                               verify https://n8k.org/health
 ```
 
-Pull requests run `lint` and `test` only.
+Pull requests run `lint` and `test` only. Production runs exactly the image that
+testing ran and CI scanned; promotion never rebuilds.
 
 ## Workflows
 
@@ -65,15 +65,17 @@ The host's `cv-mcp-testing-deploy.path` sees the new `release.env` and runs
 Started only by a person: in Woodpecker, open a green `main` pipeline and choose
 Promote → `production` (or `woodpecker-cli pipeline deploy nate/cv-mcp <number>
 production`). That is the approval gate (PROJECT.md G5); nothing reaches
-production on push. The first step refuses commits that are not on `main`.
+production on push.
 
 | Step | Runs |
 |---|---|
-| image | `nix build .#packages.x86_64-linux.image`; skipped if GHCR already has the SHA (rollback) |
-| scan | Trivy, same gate as CI |
-| publish | `ghcr.io/n8k/cv-mcp:<sha>`, then `:production` → same digest |
-| deploy | `az login --service-principal`, `az containerapp update --image ghcr.io/n8k/cv-mcp:<sha>` |
-| verify | `https://<fqdn>/health`, retried for ~2 min to allow a cold start |
+| check | refuses commits not on `main`; `skopeo inspect` that `gitea.local/nate/cv-mcp:<sha>` exists (CI publishes only scanned images) |
+| tag | `:production` → same digest (a label only) |
+| deploy | copies `deploy/compose.yaml` and writes `release.env` (`APP_IMAGE=gitea.local/nate/cv-mcp:<sha>`) to `/opt/cicd/cv-mcp/production/` |
+| verify | `https://n8k.org/health` through Cloudflare and the tunnel, healthy twice in a row (up to ~3.5 min) |
+
+The host's `cv-mcp-production-deploy.path` sees the new `release.env` and runs
+`docker compose up --wait`, as for testing.
 
 ## Tiers and deployed commits
 
@@ -81,12 +83,10 @@ Fill in after each deploy (the SHA is also the image tag).
 
 | Tier | Where | Image | Deployed SHA | Date |
 |---|---|---|---|---|
-| testing | Pi, `/opt/cicd/cv-mcp/testing` | `gitea.local/nate/cv-mcp:<sha>` | `0bbe58052719047d638b0023f898205f962f9e22` (main after #3) | 2026-10-23 |
-| production | Azure Container Apps `cv-mcp` (rg `cv-mcp`) | `ghcr.io/n8k/cv-mcp:<sha>` | not deployed yet | |
+| testing | Pi, `/opt/cicd/cv-mcp/testing`, port 8250 | `gitea.local/nate/cv-mcp:<sha>` | `0bbe58052719047d638b0023f898205f962f9e22` (main after #3) | 2026-10-23 |
+| production | Pi, `/opt/cicd/cv-mcp/production`, port 8251 | `gitea.local/nate/cv-mcp:<sha>` | not deployed yet | |
 
-Which commit is running, from the host:
-`cat /opt/cicd/cv-mcp/testing/release.env`; for production:
-`az containerapp show -n cv-mcp -g cv-mcp --query properties.template.containers[0].image`.
+Which commit is running: `cat /opt/cicd/cv-mcp/<tier>/release.env` on the Pi.
 
 ## Milestone sign-offs
 
@@ -111,27 +111,27 @@ production: `validate_cv` clean on testing, and the Markdown read through once.
 
 - Testing: open the older commit's pipeline in Woodpecker and restart it (or
   run `cd.yaml` manually on that commit). It rewrites `release.env` with the
-  older SHA tag; nothing is rebuilt.
-- Production: promote the older commit's pipeline to `production`. Its image
-  is already in GHCR, so `image`/`scan` skip and `deploy` points the app back
-  at that tag.
+  older SHA tag.
+- Production: promote the older commit's pipeline to `production`. It rewrites
+  production's `release.env` with that SHA tag.
 
-Never deploy `:testing`, `:production` or `:latest`; those tags are labels only.
+Nothing is rebuilt either way. Never deploy `:testing`, `:production` or
+`:latest`; those tags are labels only.
 
 ## Hostnames, ports and vhosts
 
-| Name | Tier | Port (127.0.0.1) | Kind |
+| Name | Tier | Port (127.0.0.1) | How it is reached |
 |---|---|---|---|
-| `cv-mcp.local` | testing | 8250 → container 8000 | app: `/mcp`, `/control/mcp` (when enabled), `/health`, `/` |
+| `cv-mcp.local` | testing | 8250 → container 8000 | LAN, host nginx with the shared certificate. `/mcp`, `/control/mcp`, `/health`, `/` |
+| `n8k.org` | production | 8251 → container 8000 | Public: Cloudflare DNS + TLS → tunnel `988e0353-cb31-49a7-9691-aa7822356bfc` → `cloudflared` on the Pi. Only `/`, `/health`, `/mcp`; anything else 404 |
 
 - Generated by `modules/domains/cv-mcp-domains.nix`: `cv-mcp.local`.
 - nginx vhosts in `cv-mcp-pipeline.nix`: `cv-mcp.local`. The two lists match.
+- `n8k.org` is a Cloudflare DNS record (`cloudflared tunnel route dns cv-mcp
+  n8k.org`, CNAME to `<tunnel id>.cfargotunnel.com`), not a local name; the
+  tunnel's ingress rules are in `cv-mcp-pipeline.nix`.
 - Port block 8250–8259 (quartet 8220s, 321fire 8230s, star_tensai 8240s). The
   module asserts no collision with `services.cicdCenter.ports`.
-- Production has no local name: Azure assigns `*.azurecontainerapps.io`
-  (custom domain is an open question in PROJECT.md).
-- After the switch, check the certificate:
-  `openssl x509 -in /etc/ssl/opencloud/fullchain.pem -noout -ext subjectAltName | grep cv-mcp.local`.
 
 ## Secrets (names only)
 
@@ -139,29 +139,21 @@ Never deploy `:testing`, `:production` or `:latest`; those tags are labels only.
 
 | Secret | Scope | Where it comes from | Used by |
 |---|---|---|---|
-| `ci_registry_user` | global | cicd.nix `globalSecrets` (exists) | ci.yaml publish |
-| `ci_registry_password` | global | cicd.nix `globalSecrets` (exists) | ci.yaml publish |
-| `ghcr_token` | repo `nate/cv-mcp` | add by hand: GitHub PAT (classic) with `write:packages` for `n8k` | release.yaml image, publish |
-| `azure_client_id` | repo | add by hand: service principal app ID | release.yaml deploy |
-| `azure_tenant_id` | repo | add by hand | release.yaml deploy |
-| `azure_client_secret` | repo | add by hand | release.yaml deploy |
-| `azure_subscription_id` | repo | add by hand | release.yaml deploy |
+| `ci_registry_user` | global | cicd.nix `globalSecrets` (exists) | ci.yaml publish; release.yaml check, tag |
+| `ci_registry_password` | global | cicd.nix `globalSecrets` (exists) | ci.yaml publish; release.yaml check, tag |
 
-Repo secrets live in Woodpecker's database, not in Nix. Add them in the repo's
-Settings → Secrets, limited to the `deployment` event, or with `woodpecker-cli
-repo secret add` (check `--help`, subcommands changed in 3.x). After a database
-reset they must be added again.
+No repo secrets: nothing leaves the Pi.
 
-### sops-nix (runtime)
+### sops-nix (runtime, on the Pi)
 
-| Key in secrets.yaml | Tier | Used by |
-|---|---|---|
-| `cv-mcp/testing/CV_MCP_CONTROL_TOKEN` | testing | `/control/mcp` bearer token |
+| Key in secrets.yaml | Used by |
+|---|---|
+| `cv-mcp/testing/CV_MCP_CONTROL_TOKEN` | testing `/control/mcp` bearer token |
+| `cloudflared/cv-mcp` | the tunnel's credentials JSON (`AccountTag`, `TunnelID`, `TunnelSecret`), loaded by `cloudflared` as a systemd credential |
 
-Off until the key exists: `control = false` in `cv-mcp-pipeline.nix`. Add the
-key (`sops secrets.yaml`, e.g. `openssl rand -hex 32`), set `control = true`,
-rebuild. sops-nix fails activation on a declared but missing key, which is why
-it is gated. Production has no runtime secrets.
+The Cloudflare account certificate (`cert.pem`, from `cloudflared tunnel login`)
+can manage every tunnel on the account and is not needed to run this one; it is
+not kept on the Pi. Production has no runtime secrets.
 
 ## MCP endpoints
 
@@ -169,25 +161,24 @@ it is gated. Production has no runtime secrets.
 |---|---|---|
 | `https://cv-mcp.local/mcp` | testing | read-only, LAN only |
 | `https://cv-mcp.local/control/mcp` | testing | `Authorization: Bearer <CV_MCP_CONTROL_TOKEN>`; tools `validate_cv`, `reload` |
-| `https://<fqdn>/mcp` | production | read-only, public, no auth (PROJECT.md decision) |
+| `https://n8k.org/mcp` | production | read-only, public, no auth (PROJECT.md decision) |
 
-These are paths on the one server, not separate MCP containers, so there are no
-`mcp-readonly.*` / `mcp-control.*` hostnames. The module asserts the control
-endpoint is only enabled on dev/testing. Host-level MCP servers (Gitea, Grafana,
-Woodpecker) belong to `cicd.nix` and are not part of this project.
+These are paths on the one server, not separate MCP containers. Production
+serves no control endpoint: the module asserts `control` is only enabled on
+dev/testing, and the tunnel does not forward `/control` paths anyway.
+Host-level MCP servers (Gitea, Grafana, Woodpecker) belong to `cicd.nix`.
 
 ## Observability
 
 - Testing: blackbox probe `cv-mcp-testing` → `http://127.0.0.1:8250/health`.
-  Off until the first deploy (`probe = false`); a probe on nothing alerts after
-  3 minutes. Container logs go to journald (`tag: cv-mcp-testing`) and from
-  there to Loki.
-- Production: not probed from the Pi. `services.cicdCenter.monitoring.probes`
-  is scraped every 30 s, which would keep the scale-to-zero replica awake and
-  spend the free grant (ARCHITECTURE.md asks for at most every 30 minutes).
-  Azure's log stream covers v1. The "fails twice in a row" alert needs a
-  separate low-frequency scrape job; not built.
-- Set an Azure budget alert on the subscription (ARCHITECTURE.md Security).
+  Logs: Loki `{container="cv-mcp-testing-cv-mcp-1"}`.
+- Production: two probes, `cv-mcp-production` → `http://127.0.0.1:8251/health`
+  and `cv-mcp-production-public` → `https://n8k.org/health` (through Cloudflare
+  and the tunnel, so a tunnel or DNS failure alerts too). Off until the first
+  promotion (`probe = false`); a probe on nothing alerts after 3 minutes.
+  Logs: Loki `{container="cv-mcp-production-cv-mcp-1"}`; the tunnel itself is
+  `{unit="cloudflared-tunnel-988e0353-cb31-49a7-9691-aa7822356bfc.service"}`.
+- `ProjectProbeFailed` fires after 3 minutes of failed probes.
 
 ## Exceptions and deviations
 
@@ -196,10 +187,10 @@ Woodpecker) belong to `cicd.nix` and are not part of this project.
 | FastMCP 4.1.3 and 8 dependencies are wheel derivations in `nix/python-packages.nix` | nixos-26.05 has fastmcp 3.2.3 and mcp 1.26.0. Added beside the Python set (no overrides), so the rest stay cache hits; `certifi`, `idna`, `aiofile` pins relaxed |
 | `.trivyignore.yaml` accepts 13 findings | All in nixpkgs-provided packages (aiohttp, anyio, certifi, cryptography, python-multipart, starlette, urllib3) that cannot be bumped without overriding the set. Each has a reason and expires 2026-11-22, so the scan fails again and forces a re-check after `nix flake update` |
 | `skopeo --insecure-policy` | The step container has no `/etc/containers/policy.json`; this is the same accept-anything policy skopeo ships as its default |
-| x86_64 image built at promotion, not in CI | The Pi cannot build x86_64 derivations without a remote builder; building it in `ci.yaml` would turn every push red until one exists. Rollback still never rebuilds (the SHA is reused from GHCR) |
 | Testing deploys with compose, not oci-containers | ARCHITECTURE.md says "oci-container"; the oci-containers method needs a Nix commit and rebuild per deploy, which contradicts M4 (deploy on push). Compose is the skill default and what hippo/321fire use |
 | Testing hostname `cv-mcp.local`, not `cv-mcp.testing` | Named that way in ARCHITECTURE.md and M4 |
 | `extra_hosts` on steps | `woodpecker-cli lint` (3.19) warns that the schema does not list it; the agent accepts it for Trusted repos (same as clone) |
+| Production on the Pi, not a cloud host | Revised 2026-10-23 (PROJECT.md Decisions): Azure's setup was too heavy; the tunnel keeps hosting free and runs the tested image unchanged. Security mitigations are in ARCHITECTURE.md |
 
 ## Pre-flight
 
@@ -242,25 +233,19 @@ To do on the Pi before the first run:
 
 Before the first promotion (M5):
 
-- [ ] x86_64 builder for the Pi's nix-daemon: NixyBookPro as a
-      `nix.buildMachines` entry (ARCHITECTURE.md), or `boot.binfmt.emulatedSystems
-      = [ "x86_64-linux" ]` on the Pi (slow, but only about a dozen small
-      derivations need building). Neither is configured yet. Test with
-      `nix build --dry-run .#packages.x86_64-linux.image` on the Pi.
-- [ ] GHCR: first publish creates the package `n8k/cv-mcp`; make it public in
-      GitHub → Packages so Azure can pull without credentials.
-- [ ] Azure, once by hand (Consumption plan, personal subscription):
-      ```bash
-      az group create -n cv-mcp -l <region>
-      az containerapp env create -n cv-mcp-env -g cv-mcp -l <region>
-      az containerapp create -n cv-mcp -g cv-mcp --environment cv-mcp-env \
-        --image ghcr.io/n8k/cv-mcp:<first sha> --ingress external --target-port 8000 \
-        --min-replicas 0 --max-replicas 1 --cpu 0.25 --memory 0.5Gi
-      az ad sp create-for-rbac -n cv-mcp-deploy --role Contributor \
-        --scopes /subscriptions/<id>/resourceGroups/cv-mcp
-      ```
-      Put the service principal's values into the Woodpecker repo secrets.
-      Budget alert on the subscription.
-- [ ] Woodpecker repo secrets above exist.
+- [x] Cloudflare: `n8k.org` on the account, tunnel `cv-mcp` created, DNS route
+      `n8k.org` → tunnel (done by hand, 2026-10-23).
+- [x] Tunnel credentials JSON in sops as `cloudflared/cv-mcp`.
+- [ ] Plain-text credentials removed from the Pi (`shred -u
+      ~/.cloudflared/<id>.json`) and `cert.pem` deleted or moved off the Pi.
+- [ ] NixOS config switched with the production tier and tunnel. Check:
+      `systemctl status cloudflared-tunnel-988e0353-cb31-49a7-9691-aa7822356bfc`
+      is active, and `curl -s -o /dev/null -w '%{http_code}\n' https://n8k.org/health`
+      gives 502 or 404 until the first promotion (the tunnel is up, nothing
+      listens on 8251 yet).
+- [ ] First promotion green; then `probe = true` for production and rebuild;
+      both production probes up in Prometheus.
+- [ ] Optional: a Cloudflare rate-limiting rule for `n8k.org` (dashboard →
+      Security → WAF), if abuse ever shows up.
 - [ ] Alertmanager receiver confirmed with a test alert, or alerts accepted as
       record-only.
