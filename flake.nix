@@ -21,6 +21,7 @@
       appFiles = [
         ./server.py
         ./cv.toml
+        ./index.html
       ];
       toSource =
         files:
@@ -73,7 +74,7 @@
           cv-mcp = pkgs.runCommand "cv-mcp" { meta.mainProgram = "cv-mcp"; } ''
             mkdir -p $out/share/cv-mcp $out/bin
             # server.py reads cv.toml from its own directory unless CV_PATH is set.
-            cp ${src}/server.py ${src}/cv.toml $out/share/cv-mcp/
+            cp ${src}/server.py ${src}/cv.toml ${src}/index.html $out/share/cv-mcp/
             cat > $out/bin/cv-mcp <<EOF
             #!${pkgs.runtimeShell}
             exec ${python}/bin/python $out/share/cv-mcp/server.py "\$@"

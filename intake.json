@@ -3,7 +3,7 @@
   "project_name": "cv-mcp",
   "skeleton": {
     "docs_sha256": {
-      "ARCHITECTURE.md": "98d28f373bfdc5941fdd36433e8c7a4e4126fb09eecb048cd62f240c1fa4eb46",
+      "ARCHITECTURE.md": "b3b2d9502c336a7d5dcaf27881a3441d012e0288cd82729f3ba2a26084706ebe",
       "PROJECT.md": "6d57ea5518ce7efa2c6746842422d477d66c8cca58b6316e67d097054f8b6b72"
     },
     "apps": [

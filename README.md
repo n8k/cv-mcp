@@ -29,7 +29,10 @@ Control endpoint, `/control/mcp` — only when `CV_MCP_CONTROL_TOKEN` is set
 | `validate_cv` | Parse errors, empty required fields, remaining TODOs, criteria with no evidence |
 | `reload` | Re-reads the file and reports what was loaded |
 
-`GET /health` returns 200 when the CV file parses, 503 otherwise.
+`GET /health` returns 200 when the CV file parses, 503 otherwise. `GET /` is a
+landing page for browsers (`index.html`: server URL, connect steps for Claude and
+Copilot Studio, sample prompts), filled in from `cv.toml`; other clients get a
+one-line plain-text pointer.
 
 ## The CV file
 

@@ -252,6 +252,25 @@ def test_name_comes_from_the_cv_file():
     assert f"the CV of {shipped}." in server.mcp.instructions
 
 
+def test_landing_page_for_browsers():
+    with TestClient(server.build_app()) as http:
+        r = http.get("/", headers={"Accept": "text/html,application/xhtml+xml"})
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/html")
+    assert "frame-ancestors 'none'" in r.headers["content-security-policy"]
+    page = r.text
+    assert "<h1>Alex Morgan</h1>" in page and "https://testserver/mcp" in page
+    assert "Add custom connector" in page and "Model Context Protocol" in page
+    assert "$" not in page  # every template field filled
+
+
+def test_landing_page_escapes_cv_fields(tmp_path, monkeypatch):
+    write_cv(tmp_path, MINIMAL.replace('name = "Test Person"', 'name = "<script>x</script> Person"'), monkeypatch)
+    with TestClient(server.build_app()) as http:
+        page = http.get("/", headers={"Accept": "text/html"}).text
+    assert "<script>x</script>" not in page and "&lt;script&gt;x&lt;/script&gt; Person" in page
+    assert "TODO" not in page  # the placeholder headline is stripped
+
+
 def test_case_study_placeholders_stay_out_of_markdown(tmp_path, monkeypatch):
     write_cv(tmp_path, MINIMAL.replace('result = "r"', 'result = "TODO: result"'), monkeypatch)
 
