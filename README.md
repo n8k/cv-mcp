@@ -79,7 +79,21 @@ secrets and runbook: [PIPELINE.md](PIPELINE.md); design:
 
 ## Connect
 
-Unverified — confirm these menu names during milestone M6:
+Server URL: `https://n8k.org/mcp`. No authentication.
 
-- **Copilot Studio:** agent → Tools → Add a tool → Model Context Protocol → server URL `https://n8k.org/mcp`, no auth.
-- **Claude:** Settings → Connectors → Add custom connector → same URL.
+**Claude** (verified 2026-10-23):
+
+1. Settings → Connectors → **Add custom connector**. Name it (e.g. `CV-MCP`),
+   paste the URL, leave the OAuth fields empty. On Team or Enterprise plans an
+   owner may need to allow custom connectors first.
+2. In a chat, open the tools menu under the message box and switch the
+   connector on. Claude asks before the first tool call; every tool is
+   read-only.
+3. Try: "Summarise Nate's experience", "What has he done with agentic AI?",
+   or paste a job description and ask "Assess his fit for this role and show
+   the gaps." The `interview_candidate` prompt and the `cv://markdown`
+   resource are in the same menu, where the client shows MCP prompts.
+
+**Copilot Studio** (not yet verified): agent → Tools → Add a tool → Model
+Context Protocol → the URL above, no authentication. If the tenant blocks
+external MCP servers, the fallback is a live demo in Claude.

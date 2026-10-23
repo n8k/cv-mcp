@@ -123,6 +123,23 @@ at `https://n8k.org` through the Cloudflare Tunnel. Confirmed by Nate:
 
 Replaces the Azure Container Apps plan (PROJECT.md Decisions, 2026-10-23).
 
+### M6: reviewer check — Claude half (2026-10-23)
+
+Added as a custom connector in claude.ai (`CV-MCP`, `https://n8k.org/mcp`, no
+auth) and exercised against production from a Claude session:
+
+- `get_profile` returns the real profile; contact is email and LinkedIn only.
+- `list_case_studies` returns all 7 case studies.
+- `search_cv("phone")` returns nothing.
+- `assess_role_fit` with caller-supplied criteria (an example DevOps role)
+  rates each criterion strong / partial / gap with evidence, and reports the
+  gap (Kubernetes) instead of hiding it (G3).
+- The server's instructions reach the client ("use get_profile first … only
+  state what the tools return").
+
+Still open for M6: the Copilot Studio connection, tested from the reviewers'
+side (or the live-demo fallback chosen).
+
 ## Rollback
 
 - Testing: open the older commit's pipeline in Woodpecker and restart it (or
