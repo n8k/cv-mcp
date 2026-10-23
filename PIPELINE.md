@@ -83,8 +83,8 @@ Fill in after each deploy (the SHA is also the image tag).
 
 | Tier | Where | Image | Deployed SHA | Date |
 |---|---|---|---|---|
-| testing | Pi, `/opt/cicd/cv-mcp/testing`, port 8250 | `gitea.local/nate/cv-mcp:<sha>` | `0bbe58052719047d638b0023f898205f962f9e22` (main after #3) | 2026-10-23 |
-| production | Pi, `/opt/cicd/cv-mcp/production`, port 8251 | `gitea.local/nate/cv-mcp:<sha>` | not deployed yet | |
+| testing | Pi, `/opt/cicd/cv-mcp/testing`, port 8250 | `gitea.local/nate/cv-mcp:<sha>` | `b7f7837075e89c2c591c38930cfefa7f864165e0` (main after #5) | 2026-10-23 |
+| production | Pi, `/opt/cicd/cv-mcp/production`, port 8251 | `gitea.local/nate/cv-mcp:<sha>` | `b7f7837075e89c2c591c38930cfefa7f864165e0` (first promotion) | 2026-10-23 |
 
 Which commit is running: `cat /opt/cicd/cv-mcp/<tier>/release.env` on the Pi.
 
@@ -106,6 +106,22 @@ Signed off by Nate as public-safe, against the CV served by the testing tier at
 
 Any later change to `cv.toml` needs the same check before it is promoted to
 production: `validate_cv` clean on testing, and the Markdown read through once.
+
+### M5: production (2026-10-23)
+
+First promotion of `b7f7837` (main after #5) to production on the Pi, public
+at `https://n8k.org` through the Cloudflare Tunnel. Confirmed by Nate:
+
+- `release.yaml` green: check, tag, deploy, verify.
+- `/opt/cicd/cv-mcp/production/release.env` names
+  `gitea.local/nate/cv-mcp:b7f7837075e89c2c591c38930cfefa7f864165e0`, and the
+  running container `cv-mcp-production-cv-mcp-1` is healthy on that image.
+- `https://n8k.org/health` returns `{"status":"ok"}`;
+  `https://n8k.org/control/mcp` returns 404 (tunnel path allow-list).
+- Production probes on (n8k/NixOS#104): `cv-mcp-production` (local) and
+  `cv-mcp-production-public` (through Cloudflare).
+
+Replaces the Azure Container Apps plan (PROJECT.md Decisions, 2026-10-23).
 
 ## Rollback
 
@@ -238,13 +254,15 @@ Before the first promotion (M5):
 - [x] Tunnel credentials JSON in sops as `cloudflared/cv-mcp`.
 - [ ] Plain-text credentials removed from the Pi (`shred -u
       ~/.cloudflared/<id>.json`) and `cert.pem` deleted or moved off the Pi.
-- [ ] NixOS config switched with the production tier and tunnel. Check:
+- [x] NixOS config switched with the production tier and tunnel (n8k/NixOS#103). Check:
       `systemctl status cloudflared-tunnel-988e0353-cb31-49a7-9691-aa7822356bfc`
       is active, and `curl -s -o /dev/null -w '%{http_code}\n' https://n8k.org/health`
       gives 502 or 404 until the first promotion (the tunnel is up, nothing
       listens on 8251 yet).
-- [ ] First promotion green; then `probe = true` for production and rebuild;
-      both production probes up in Prometheus.
+- [x] First promotion green (`b7f7837`); `probe = true` for production
+      (n8k/NixOS#104).
+- [ ] Both production probes at 1 in Prometheus (Grafana Explore:
+      `probe_success{project=~"cv-mcp-production.*"}`).
 - [ ] Optional: a Cloudflare rate-limiting rule for `n8k.org` (dashboard →
       Security → WAF), if abuse ever shows up.
 - [ ] Alertmanager receiver confirmed with a test alert, or alerts accepted as
