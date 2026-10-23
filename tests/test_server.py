@@ -227,6 +227,11 @@ def test_resources():
     assert json.loads(full)["person"]["name"] == "Alex Morgan"
     assert md.startswith("# Alex Morgan")
     assert "### Digital Transformation Manager — Northbridge Insurance (2021-04–present)" in md
+    # STAR stories are part of the readable CV, after experience (education, when present,
+    # and skills follow).
+    assert "## Case studies" in md and "### Generative-AI claims-summary assistant" in md
+    assert "- **Result:** Reading time fell to 6 minutes per file" in md
+    assert md.index("## Experience") < md.index("## Case studies") < md.index("## Skills")
 
 
 def test_prompt():
@@ -235,6 +240,26 @@ def test_prompt():
             return (await c.get_prompt("interview_candidate", {"focus": "delivery"})).messages[0].content.text
     text = asyncio.run(run())
     assert "role focused on delivery" in text and "assess_role_fit" in text
+    assert "screening Alex Morgan" in text  # name from the CV file, not the code
+
+
+def test_name_comes_from_the_cv_file():
+    with TestClient(server.build_app()) as http:
+        assert http.get("/").text.startswith("Alex Morgan — CV as an MCP server.")
+    # Instructions are built at import, from the shipped cv.toml.
+    import tomllib
+    shipped = tomllib.loads((ROOT / "cv.toml").read_text(encoding="utf-8"))["person"]["name"]
+    assert f"the CV of {shipped}." in server.mcp.instructions
+
+
+def test_case_study_placeholders_stay_out_of_markdown(tmp_path, monkeypatch):
+    write_cv(tmp_path, MINIMAL.replace('result = "r"', 'result = "TODO: result"'), monkeypatch)
+
+    async def read():
+        async with Client(server.mcp) as c:
+            return (await c.read_resource("cv://markdown"))[0].text
+    md = asyncio.run(read())
+    assert "### One" in md and "- **Action:** a" in md and "Result" not in md
 
 
 # ---------- Control tools ----------

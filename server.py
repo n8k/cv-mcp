@@ -1,4 +1,4 @@
-"""CV MCP server — Nathan Kemppainen.
+"""CV MCP server.
 
 Serves a CV as structured, read-only MCP tools, resources and a prompt, so any
 MCP client (Copilot Studio, Claude, etc.) can query it conversationally.
@@ -97,13 +97,23 @@ def _count_matches(term: str, text: str) -> int:
 
 # ---------- Read-only server ----------
 
+def _candidate_name() -> str:
+    """person.name from the CV file, so the name has one source like everything else."""
+    try:
+        return _clean(load_cv()).get("person", {}).get("name") or "the candidate"
+    except Exception:  # noqa: BLE001 — a broken file shows in /health, not here
+        return "the candidate"
+
+
+# Instructions are sent once per session, so they take the name at start-up; a new
+# name in cv.toml arrives with the redeploy that ships it.
 mcp = FastMCP(
     name="nate-kemppainen-cv",
     instructions=(
-        "This server is Nathan (Nate) Kemppainen's CV. Use get_profile first, "
-        "then the other tools to answer questions about his experience, skills "
-        "and fit for roles. Only state what the tools return; if something is "
-        "not in the CV, say so rather than guessing."
+        f"This server is the CV of {_candidate_name()}. Use get_profile first, "
+        "then the other tools to answer questions about their experience, skills, "
+        "case studies and fit for roles. Only state what the tools return; if "
+        "something is not in the CV, say so rather than guessing."
     ),
 )
 
@@ -296,6 +306,15 @@ def cv_markdown() -> str:
         if r.get("summary") and not r.get("highlights"):
             out.append(r["summary"])
         out += [f"- {h}" for h in r.get("highlights", [])]
+    if cv.get("case_studies"):
+        out += ["", "## Case studies"]
+        for c in cv["case_studies"]:
+            out += ["", f"### {c.get('title') or c['id']}"]
+            out += [
+                f"- **{label}:** {c[key]}"
+                for label, key in (("Situation", "situation"), ("Task", "task"), ("Action", "action"), ("Result", "result"))
+                if c.get(key)
+            ]
     if cv.get("education"):
         out += ["", "## Education"]
         out += [f"- {e.get('qualification', '')}, {e.get('institution', '')} ({e.get('year', '')})" for e in cv["education"]]
@@ -316,7 +335,7 @@ def interview_candidate(job_description: str = "", focus: str = "") -> str:
         "and pass them to assess_role_fit."
     )
     return (
-        f"You are screening Nathan Kemppainen{role}. Start with get_profile.{jd} "
+        f"You are screening {_candidate_name()}{role}. Start with get_profile.{jd} "
         "For each criterion rated 'partial' or 'gap', look for supporting detail with search_cv "
         "or get_case_study before concluding, then propose two probing interview questions. "
         "Cite which tool each fact came from, and do not state anything the tools did not return."
@@ -335,7 +354,7 @@ async def health(_: Request) -> JSONResponse:
 @mcp.custom_route("/", methods=["GET"])
 async def index(_: Request) -> PlainTextResponse:
     return PlainTextResponse(
-        "Nathan Kemppainen — CV as an MCP server.\n"
+        f"{_candidate_name()} — CV as an MCP server.\n"
         "Add this server's /mcp URL as a connector in Copilot Studio or Claude, then ask about the CV.\n"
     )
 

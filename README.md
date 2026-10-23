@@ -1,6 +1,6 @@
 # CV as an MCP server
 
-Nathan Kemppainen's CV, served over the Model Context Protocol so any agent
+Nate Kemppainen's CV, served over the Model Context Protocol so any agent
 (Copilot Studio, Claude, etc.) can query it instead of reading a PDF.
 
 Plan and design: [docs/PROJECT.md](docs/PROJECT.md),
@@ -93,6 +93,20 @@ Server URL: `https://n8k.org/mcp`. No authentication.
    or paste a job description and ask "Assess his fit for this role and show
    the gaps." The `interview_candidate` prompt and the `cv://markdown`
    resource are in the same menu, where the client shows MCP prompts.
+
+Sample prompts for reviewers (start a fresh chat with the connector on):
+
+- "Introduce Nate in a short paragraph, then list his case studies with one line each."
+- "Tell me, in STAR format, about a time Nate changed how an organisation works."
+- "Give me a STAR example of Nate using AI or automation to save leadership time."
+- "Walk me through his largest delivery programme as Situation, Task, Action and Result."
+- Paste a job description, then: "Assess Nate's fit criterion by criterion, back up
+  each strong rating with the most relevant case study in STAR form, and show the gaps."
+- "Using his CV tools only, write three behavioural interview questions for this
+  role, each tied to one of his case studies."
+
+Asking for examples, stories or "STAR" makes the client call `get_case_study`;
+adding "use the CV tools" keeps it from answering from memory.
 
 **Copilot Studio** (not yet verified): agent → Tools → Add a tool → Model
 Context Protocol → the URL above, no authentication. If the tenant blocks
