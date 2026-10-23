@@ -9,7 +9,7 @@
   outputs =
     { self, nixpkgs }:
     let
-      # aarch64: the Pi (CI and the testing tier). x86_64: Azure Container Apps (production).
+      # aarch64: the Pi (CI, testing and production). x86_64: development on the laptop.
       systems = [
         "aarch64-linux"
         "x86_64-linux"
@@ -91,8 +91,8 @@
           default = cv-mcp;
 
           # A script that streams the image tar to stdout (run it, do not docker load the path).
-          # Built for the system it is evaluated for: .#packages.x86_64-linux.image is the
-          # production image, .#image on the Pi is the aarch64 testing image.
+          # Built for the system it is evaluated for: .#image on the Pi is the aarch64 image
+          # both tiers run.
           image = pkgs.dockerTools.streamLayeredImage {
             name = "cv-mcp";
             tag = "latest"; # the pipeline pushes it under the commit SHA
@@ -157,15 +157,6 @@
               trivy
               curl
               jq
-            ];
-          };
-
-          # Production promotion only (azure-cli is large; kept out of the ci shell).
-          deploy = pkgs.mkShell {
-            packages = with pkgs; [
-              azure-cli
-              skopeo
-              curl
             ];
           };
         }

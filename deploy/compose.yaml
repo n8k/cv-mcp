@@ -1,9 +1,10 @@
-# Testing tier on the Pi. CD copies this file to /opt/cicd/cv-mcp/testing/compose.yaml
-# and writes release.env beside it; cv-mcp-testing-deploy.service (NixOS config repo,
+# Both tiers on the Pi (testing, production). Woodpecker copies this file to
+# /opt/cicd/cv-mcp/<tier>/compose.yaml (cd.yaml for testing, release.yaml for production)
+# and writes release.env beside it; cv-mcp-<tier>-deploy.service (NixOS config repo,
 # hosts/nixos/projects/cv-mcp-pipeline.nix) runs it with two env files:
-#   /run/secrets/rendered/cv-mcp-testing.env   APP_PORT, CV_MCP_CONTROL_TOKEN (when enabled)
-#   release.env                                APP_IMAGE=gitea.local/nate/cv-mcp:<sha>
-# Production does not use this file (Azure Container Apps, see PIPELINE.md).
+#   /run/secrets/rendered/cv-mcp-<tier>.env   APP_TIER, APP_PORT, CV_MCP_CONTROL_TOKEN
+#                                             (testing only, when enabled)
+#   release.env                               APP_IMAGE=gitea.local/nate/cv-mcp:<sha>
 services:
   cv-mcp:
     image: ${APP_IMAGE:?APP_IMAGE not set}
@@ -11,7 +12,7 @@ services:
     ports:
       - "127.0.0.1:${APP_PORT:?APP_PORT not set}:8000"
     environment:
-      # Empty = no /control/mcp.
+      # Empty = no /control/mcp (always the case in production).
       CV_MCP_CONTROL_TOKEN: ${CV_MCP_CONTROL_TOKEN:-}
     read_only: true
     tmpfs:
@@ -20,4 +21,4 @@ services:
     logging:
       driver: journald
       options:
-        tag: cv-mcp-testing
+        tag: cv-mcp-${APP_TIER:-testing}

@@ -11,8 +11,8 @@
 # provides: bump the wheel instead.
 #
 # Exposure, for the record: the server is read-only, parses no forms or multipart bodies,
-# makes no outbound HTTP calls at runtime, and sits behind nginx (testing) or the Azure
-# ingress (production), which terminate TLS.
+# makes no outbound HTTP calls at runtime, and sits behind nginx (testing) or Cloudflare
+# and its tunnel (production), which terminate TLS.
 vulnerabilities:
   - id: CVE-2026-111064
     statement: aiohttp (via nixpkgs truststore); not used as a server or client by cv-mcp

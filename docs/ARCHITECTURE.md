@@ -1,13 +1,16 @@
 # cv-mcp — Architecture
 
-Status: Approved 2026-10-22
+Status: Approved 2026-10-22. Revised 2026-10-23: production moved from Azure
+Container Apps to the Pi behind a Cloudflare Tunnel (approved by merging the PR
+that carries this revision).
 
 ## Overview
 
 One Python process (FastMCP over Streamable HTTP) reads `cv.toml` on every
-call and answers MCP requests. The same image runs in two places: a testing
-tier on the Pi behind nginx, with an extra control endpoint, and a read-only
-production tier on Azure Container Apps that reviewers reach over public HTTPS.
+call and answers MCP requests. The same aarch64 image runs as two tiers on the
+Pi: testing, on the home network behind nginx with an extra control endpoint,
+and a read-only production tier that reviewers reach at `https://n8k.org`
+through a Cloudflare Tunnel.
 
 ```mermaid
 flowchart LR
@@ -15,28 +18,29 @@ flowchart LR
     CS[Copilot Studio agent]
     CL[Claude connector]
   end
-  subgraph Azure["Azure Container Apps (production)"]
-    P[cv-mcp<br/>/mcp read-only<br/>/health]
-  end
-  subgraph Pi["Raspberry Pi 4B (testing)"]
+  CF[Cloudflare edge<br/>n8k.org, TLS]
+  subgraph Pi["Raspberry Pi 4B"]
+    CD[cloudflared<br/>outbound tunnel]
+    P[cv-mcp production<br/>/mcp read-only<br/>/health]
     NG[nginx<br/>cv-mcp.local]
-    T[cv-mcp<br/>/mcp read-only<br/>/control/mcp token<br/>/health]
-    GT[Gitea] --> WP[Woodpecker]
+    T[cv-mcp testing<br/>/mcp read-only<br/>/control/mcp token<br/>/health]
+    GT[Gitea + registry] --> WP[Woodpecker]
     PR[Prometheus / Loki]
   end
-  NB[NixyBookPro<br/>fallback x86_64 builder]
-  GH[GitHub n8k/cv-mcp<br/>+ GHCR image]
-  CS -->|HTTPS| P
-  CL -->|HTTPS| P
-  Nate -->|push| GT
-  GT -->|push mirror| GH
-  WP -->|deploy| T
-  WP -.->|build| NB
-  WP -->|publish image| GH
+  GH[GitHub n8k/cv-mcp]
+  CS -->|HTTPS| CF
+  CL -->|HTTPS| CF
+  CD -->|dials out| CF
+  CF -->|/, /health, /mcp only| CD
+  CD --> P
+  Nate -->|push| GH
+  GH -->|pull mirror| GT
+  WP -->|deploy on push| T
   WP -->|approved promotion| P
-  GH -->|pull image| P
   NG --> T
   PR --> NG
+  PR --> P
+  PR -->|public probe| CF
 ```
 
 ## Components
@@ -102,66 +106,73 @@ Control MCP surface (testing):
   and criteria with no evidence.
 - `reload`: clears any cached state and re-reads the file.
 
-External APIs: none at runtime. CI uses the GHCR registry API and the Azure
-Container Apps management API.
+External APIs: none at runtime. CI uses only the Gitea container registry on
+the Pi.
 
 ## Deployment
 
 - Built by: project flake.
   - `devShells.default` and `devShells.ci`: Python with FastMCP, pytest.
   - `packages.cv-mcp`: the app.
-  - `packages.image`: `dockerTools.streamLayeredImage` for `x86_64-linux`.
-- Build host: the Pi, substituting x86_64 packages from the binary cache.
-  If anything needs compiling for x86_64, the build runs on NixyBookPro
-  as a remote builder.
-- Testing tier (Pi):
-  - Runs as an oci-container, with the same image as production. The Pi is
-    aarch64, so it needs either an aarch64 build of the same flake output or
-    x86_64 emulation. Plan: build both architectures from the flake, test the
-    aarch64 one on the Pi, and ship the x86_64 one. Tests also run against the
-    x86_64 image where a builder allows.
-  - Port: next free port in the project block assigned by `pipeline-factory`,
-    bound to `127.0.0.1`.
-  - Hostname: `cv-mcp.local` via host nginx with the shared certificate.
-- Production (Azure Container Apps, Consumption plan, personal subscription):
-  - Image: public `ghcr.io/n8k/cv-mcp:<git-sha>`.
-  - Ingress: external, HTTPS, target port 8000.
-  - Scale: min 0, max 1 replica; 0.25 vCPU and 0.5 GiB.
-  - URL: Azure-assigned `*.azurecontainerapps.io` for v1.
-  - Promotion: Woodpecker pipeline step gated on manual approval, using the
-    Azure CLI with a service principal scoped to the app's resource group.
-- Resource expectations: about 60–100 MB RAM per process (estimate, measure
-  in M4); negligible CPU and disk.
+  - `packages.image`: `dockerTools.streamLayeredImage`, built natively on the
+    Pi (aarch64). The flake also builds for x86_64-linux, for development on
+    the laptop.
+- Registry: Gitea on the Pi, `gitea.local/nate/cv-mcp:<git-sha>`. CI publishes
+  each scanned `main` commit there.
+- Both tiers run as docker compose projects on the Pi, from the same image, each
+  bound to `127.0.0.1` on a port from the project's block (8250–8259):
+  - Testing: port 8250, `https://cv-mcp.local` through host nginx with the
+    shared certificate; deployed on every push to `main`.
+  - Production: port 8251; deployed only when Nate promotes a tested pipeline
+    in Woodpecker. Production runs the exact image testing ran; nothing is
+    rebuilt.
+- Public access (production): `cloudflared` on the Pi keeps an outbound tunnel
+  to Cloudflare. Cloudflare serves `https://n8k.org` (DNS, TLS) and forwards
+  requests through the tunnel. The tunnel forwards only `/`, `/health` and
+  `/mcp` for `n8k.org`; every other path or hostname gets a 404 from
+  `cloudflared`. No inbound port is opened on the router or the Pi.
+- Defined in the NixOS config repo: `hosts/nixos/projects/cv-mcp-pipeline.nix`
+  (tiers, deploy units, tunnel, probes, secrets).
+- Resource expectations: about 60–100 MB RAM per tier; negligible CPU and disk.
 
 ## Secrets
 
 | Name | Scope | Used by |
 |---|---|---|
 | `CV_MCP_CONTROL_TOKEN` | runtime (testing), sops-nix | Control endpoint on the Pi |
-| `GHCR_TOKEN` | CI, Woodpecker | Publishing the image |
-| `AZURE_CLIENT_ID` | CI, Woodpecker | Production deploy |
-| `AZURE_TENANT_ID` | CI, Woodpecker | Production deploy |
-| `AZURE_CLIENT_SECRET` | CI, Woodpecker | Production deploy |
-| `AZURE_SUBSCRIPTION_ID` | CI, Woodpecker | Production deploy |
+| Cloudflare Tunnel credentials (`cloudflared/cv-mcp`) | runtime (host), sops-nix | `cloudflared` |
+| `ci_registry_user`, `ci_registry_password` | CI, Woodpecker (global, existing) | Publishing and tagging the image |
 
-Production has no runtime secrets.
+Production has no runtime secrets. The Cloudflare account certificate
+(`cert.pem`) is not needed to run the tunnel and is not kept on the Pi.
 
 ## Observability
 
-- Testing: Prometheus probes `https://cv-mcp.local/health` at the default
-  interval; logs go through journald to Loki.
-- Production: probe `/health` no more than every 30 minutes. Each probe can
-  wake a scaled-to-zero replica, and frequent probes would keep it running and
-  spend the free grant. Azure's own log stream is enough for v1.
-- Alert worth having: production `/health` failing twice in a row.
+- Testing: Prometheus probes `http://127.0.0.1:8250/health` at the default
+  interval; logs go through journald to Loki (tag `cv-mcp-testing`).
+- Production: probed twice, locally (`http://127.0.0.1:8251/health`) and
+  publicly (`https://n8k.org/health`, through Cloudflare and the tunnel), so a
+  tunnel or DNS failure alerts as well as a container failure. There is no
+  scale-to-zero, so frequent probes cost nothing. Logs go to Loki (tag
+  `cv-mcp-production`).
+- Alert: `ProjectProbeFailed` fires after 3 minutes of failed probes, which
+  covers "production `/health` failing twice in a row".
 
 ## Security
 
-- Trust boundary: the public internet reaches only the production read-only
-  endpoint. Anyone can call it.
+- Trust boundary: the public internet reaches only Cloudflare. Cloudflare
+  reaches only the production container, and only `/`, `/health` and `/mcp`,
+  through the tunnel `cloudflared` opened from the Pi. Anyone can call those.
 - What an attacker can do on production: read the CV, which is public anyway,
-  and spend free-grant requests. Max one replica caps the cost of abuse;
-  exceeding the grant would be billed, so set an Azure budget alert.
+  and send load to the Pi. The container is read-only and runs as a non-root
+  user; production serves no control endpoint (enforced by an assertion in the
+  NixOS module, and unreachable anyway because the tunnel does not forward
+  `/control`). Cloudflare's free plan adds DDoS protection; a rate-limiting
+  rule can be added in its dashboard if abuse appears.
+- What changes compared with a cloud host: the home network is now behind the
+  public path. Exposure is limited to one outbound connection and one
+  localhost port; a compromise of the container would still be on the Pi, so
+  it stays read-only, unprivileged and without secrets.
 - Testing control endpoint: reachable only on the home network through nginx,
   and only with the token. Its tools change nothing persistent.
 - Content safety: `cv.toml` is public by design; only LinkedIn-level content
@@ -172,11 +183,20 @@ Production has no runtime secrets.
 
 - **Go or Rust instead of Python.** Both have maintained official MCP SDKs.
   Not chosen: FastMCP was wanted and the Python server was already working.
-- **Google Cloud Run.** Same free allowance as Azure. Not chosen: Azure fits
-  the Copilot Studio story; pulling from GHCR is less certain on Cloud Run.
+- **Azure Container Apps.** Chosen first (free grant, scale-to-zero, same
+  ecosystem as Copilot Studio), dropped on 2026-10-23: the setup was too heavy
+  for a small public service, and it needed an x86_64 image built under
+  emulation and a second registry.
+- **Google Cloud Run.** Same free allowance as Azure. Not chosen: needs a
+  billing account and Artifact Registry, about as much setup as Azure.
+- **Koyeb.** Free instance pulls from GHCR directly. Not chosen: 0.1 vCPU makes
+  Python cold starts slow.
+- **Oracle Cloud Always Free.** Arm VM, so the same image would run. Not
+  chosen: a second host to run and secure, and a hard sign-up.
 - **Render free tier.** Not chosen: about one minute to wake after 15 minutes
   idle.
 - **Fly.io.** Not chosen: no free plan for new customers.
-- **Production on the Pi through Cloudflare Tunnel.** Not chosen: Nate prefers
-  cloud hosting, which keeps the home network out of the public path.
+- **Production on the Pi through Cloudflare Tunnel.** First not chosen, to keep
+  the home network out of the public path; chosen on 2026-10-23 with the
+  mitigations under Security.
 - **Dockerfile.** Not chosen: images are Nix-built by platform rule.
