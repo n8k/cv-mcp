@@ -271,6 +271,24 @@ def test_landing_page_escapes_cv_fields(tmp_path, monkeypatch):
     assert "TODO" not in page  # the placeholder headline is stripped
 
 
+def test_search_covers_profile_summaries_and_tags(tmp_path, monkeypatch):
+    text = (
+        MINIMAL.replace('summary = "Builds things."', 'summary = "Builds things and wins buy-in."\ncareer_highlights = ["Grew a guild"]')
+        .replace('highlights = ["Shipped the claims chain", "TODO: more"]', 'summary = "Ran the night shift."\nhighlights = ["Shipped the claims chain", "TODO: more"]')
+        .replace('result = "r"', 'result = "r"\ntags = ["stakeholder management"]')
+    )
+    write_cv(tmp_path, text, monkeypatch)
+
+    def sources(q):
+        return {h["source"] for h in call(server.mcp, "search_cv", {"query": q})}
+    assert sources("buy-in") == {"profile:summary"}
+    assert sources("guild") == {"profile:highlight"}
+    assert sources("shift") == {"experience:acme"}  # an experience summary, not a highlight
+    assert sources("stakeholder") == {"case_study:one"}  # tag only; plural rules still apply
+    assert call(server.mcp, "search_cv", {"query": "stakeholder"})[0]["text"].endswith("[tags: stakeholder management]")
+    assert sources("TODO") == set()  # placeholders are still stripped before searching
+
+
 def test_case_study_placeholders_stay_out_of_markdown(tmp_path, monkeypatch):
     write_cv(tmp_path, MINIMAL.replace('result = "r"', 'result = "TODO: result"'), monkeypatch)
 
