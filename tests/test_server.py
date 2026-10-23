@@ -260,6 +260,8 @@ def test_landing_page_for_browsers():
     page = r.text
     assert "<h1>Alex Morgan</h1>" in page and "https://testserver/mcp" in page
     assert "Add custom connector" in page and "Model Context Protocol" in page
+    assert '<a href="https://github.com/n8k/cv-mcp" rel="noopener">Source Code</a>' in page
+    assert "Vibe coded with Claude on the bus ride home." in page
     assert "$" not in page  # every template field filled
 
 
@@ -269,6 +271,24 @@ def test_landing_page_escapes_cv_fields(tmp_path, monkeypatch):
         page = http.get("/", headers={"Accept": "text/html"}).text
     assert "<script>x</script>" not in page and "&lt;script&gt;x&lt;/script&gt; Person" in page
     assert "TODO" not in page  # the placeholder headline is stripped
+
+
+def test_search_covers_profile_summaries_and_tags(tmp_path, monkeypatch):
+    text = (
+        MINIMAL.replace('summary = "Builds things."', 'summary = "Builds things and wins buy-in."\ncareer_highlights = ["Grew a guild"]')
+        .replace('highlights = ["Shipped the claims chain", "TODO: more"]', 'summary = "Ran the night shift."\nhighlights = ["Shipped the claims chain", "TODO: more"]')
+        .replace('result = "r"', 'result = "r"\ntags = ["stakeholder management"]')
+    )
+    write_cv(tmp_path, text, monkeypatch)
+
+    def sources(q):
+        return {h["source"] for h in call(server.mcp, "search_cv", {"query": q})}
+    assert sources("buy-in") == {"profile:summary"}
+    assert sources("guild") == {"profile:highlight"}
+    assert sources("shift") == {"experience:acme"}  # an experience summary, not a highlight
+    assert sources("stakeholder") == {"case_study:one"}  # tag only; plural rules still apply
+    assert call(server.mcp, "search_cv", {"query": "stakeholder"})[0]["text"].endswith("[tags: stakeholder management]")
+    assert sources("TODO") == set()  # placeholders are still stripped before searching
 
 
 def test_case_study_placeholders_stay_out_of_markdown(tmp_path, monkeypatch):

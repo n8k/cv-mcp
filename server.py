@@ -171,7 +171,7 @@ def get_case_study(case_id: str) -> dict:
 
 @mcp.tool(annotations=READ_ONLY)
 def search_cv(query: str) -> list[dict]:
-    """Whole-word keyword search across experience, skills and case studies. Returns up to 10 snippets with their source."""
+    """Whole-word keyword search across the profile, experience, skills and case studies (tags included). Returns up to 10 snippets with their source."""
     cv = _clean(load_cv())
     terms = [t for t in re.split(r"\s+", query.strip()) if t]
     hits: list[dict] = []
@@ -181,7 +181,16 @@ def search_cv(query: str) -> list[dict]:
         if score:
             hits.append({"source": source, "text": text, "score": score})
 
+    # The same text assess_role_fit reads, so the two tools agree on what the CV says.
+    p = cv.get("person", {})
+    for field in ("headline", "summary"):
+        if p.get(field):
+            consider(f"profile:{field}", p[field].strip())
+    for h in p.get("career_highlights", []):
+        consider("profile:highlight", h)
     for r in cv["experience"]:
+        if r.get("summary"):
+            consider(f"experience:{r['id']}", r["summary"])
         for h in r.get("highlights", []):
             consider(f"experience:{r['id']}", h)
         consider(f"experience:{r['id']}:skills", ", ".join(r.get("skills", [])))
@@ -189,7 +198,8 @@ def search_cv(query: str) -> list[dict]:
         consider(f"skills:{cat}", ", ".join(items))
     for c in cv["case_studies"]:
         body = " ".join(str(c.get(k, "")) for k in ("situation", "task", "action", "result"))
-        consider(f"case_study:{c['id']}", f"{c.get('title', '')}: {body}")
+        tags = f" [tags: {', '.join(c['tags'])}]" if c.get("tags") else ""
+        consider(f"case_study:{c['id']}", f"{c.get('title', '')}: {body}{tags}")
 
     return sorted(hits, key=lambda h: h["score"], reverse=True)[:10]
 
