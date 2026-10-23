@@ -260,6 +260,8 @@ def test_landing_page_for_browsers():
     page = r.text
     assert "<h1>Alex Morgan</h1>" in page and "https://testserver/mcp" in page
     assert "Add custom connector" in page and "Model Context Protocol" in page
+    assert '<a href="https://github.com/n8k/cv-mcp" rel="noopener">Source Code</a>' in page
+    assert "Vibe coded with Claude on the bus ride home." in page
     assert "$" not in page  # every template field filled
 
 
