@@ -10,7 +10,7 @@ certifications = [
 ]
 career_highlights = [
   "New operating model: key contributor to Manulife's Scaled Agile transformation. Identified value streams, coached agile release trains, introduced OKRs as a measure of success, and taught certification courses to 200+ people.",
-  "AI and automation in daily operations: built a Copilot prompt that turns project plans and financials into polished business cases, and a Power Automate approval process whose early-voting design eliminated more than 50% of executive-review meetings.",
+  "AI and automation in daily operations: built Copilot prompts that turn project plans and financials into polished business cases and reports, adopted by 30 project managers and saving an estimated 10 hours per person per month, and a Power Automate approval process whose early-voting design eliminated more than 50% of executive-review meetings.",
   "Value realisation: lead quarterly executive reviews of a $60M portfolio (50+ projects a year), holding teams accountable for budget, schedule and committed KPI/OKR outcomes.",
   "Change at scale: trained 150+ Telus staff in agile as the company pivoted to software-based networks; led 160+ internal and vendor staff through a nationwide rollout at Rakuten Mobile.",
 ]
@@ -50,8 +50,9 @@ location = "Tokyo"
 start = "2022-11"
 end = "present"
 highlights = [
-  "Generative AI for business process: created Copilot prompts, including a business case prompt that produces polished business cases from project-plan and financial inputs; a project report prompt that takes project lead inputs and outputs them in a standard format; and multiple prompts for business case reviews and portfolio reports that take in data and provide focused, actionable reports.",
-  "Scaled Agile (SAFe) transformation: key volunteer in the ongoing transformation of the delivery model from waterfall to value streams. Identified value streams, introduced OKRs as a measure of success, coached agile release trains, taught certification courses to 200+ people, and updated the governance model to enable business agility and continuous value delivery.",
+  "Generative AI for business process: created Copilot prompts, including a business case prompt that produces polished business cases from project-plan and financial inputs; a project report prompt that takes project lead inputs and outputs them in a standard format; and multiple prompts for business case reviews and portfolio reports that take in data and provide focused, actionable reports. Used by 30 project managers, saving an estimated 10 hours per person per month across all prompts (about 300 hours a month).",
+  "Scaled Agile (SAFe) transformation: key volunteer in the ongoing transformation of the delivery model from waterfall to value streams. Identified value streams, introduced an OKR library that changed how business cases measure success, coached agile release trains, taught certification courses to 200+ people, and updated the governance model to enable business agility and continuous value delivery.",
+  "Outcome-based business cases: replaced the iron-triangle view of success (scope, schedule, budget) with OKRs, so proposals must define measurable business outcomes. Even projects with no financial benefit, such as regulatory mandates, now have to prove measurable results such as reduced risk and fewer incidents.",
   "Process redesign with Power Automate: replaced in-meeting business case reviews with an online process that accepts submissions, alerts stakeholders and records auditable approvals. Versioned roll-outs of modules onto a static SharePoint page ensure stability, and early executive voting lets executives pre-read and approve in advance, eliminating more than 50% of executive meetings.",
   "Portfolio governance and outcomes: lead pre-review and quarterly executive review meetings for a $60M portfolio (50+ projects a year); approve scope and benefit changes and coach the business team on KPI and OKR targets.",
   "Data-driven reporting: replaced manually built PowerPoint decks with Power BI dashboards showing real-time financials and OKRs, with exportable decks for presentations and audit archives.",
@@ -176,13 +177,22 @@ result = "More than 50% of executive meetings eliminated."
 tags = ["Power Automate", "automation", "governance", "process redesign"]
 
 [[case_studies]]
+id = "copilot-prompts"
+title = "Copilot prompts adopted by 30 project managers"
+situation = "Project managers wrote business cases, project reports and portfolio reports by hand, each in their own format."
+task = "Use generative AI to cut that work and standardise the output."
+action = "Created a set of Copilot prompts: one that produces polished business cases from project-plan and financial inputs, one that turns project lead inputs into a standard project report, and others for business case reviews and portfolio reports that give focused, actionable output."
+result = "Used by 30 project managers, saving an estimated 10 hours per person per month across all prompts (about 300 hours a month)."
+tags = ["generative AI", "Copilot", "AI adoption", "productivity", "process redesign"]
+
+[[case_studies]]
 id = "safe-transformation"
 title = "Waterfall to value streams with Scaled Agile"
 situation = "The delivery model was waterfall-based."
 task = "Transform it to value streams to enable business agility and continuous value delivery."
-action = "As a key volunteer, identified value streams, coached agile release trains, taught certification courses and updated the governance model."
-result = "200+ people trained; governance model updated for continuous value delivery."
-tags = ["SAFe", "agile", "change management", "governance", "operating model"]
+action = "As a key volunteer, identified value streams, coached agile release trains, taught certification courses, updated the governance model, and introduced an OKR library for business cases."
+result = "200+ people trained, and success is now measured in business outcomes rather than scope, schedule and budget: every proposal must define OKRs, and even projects with no financial benefit, such as regulatory mandates, must prove measurable results such as reduced risk and fewer incidents."
+tags = ["SAFe", "agile", "change management", "governance", "operating model", "OKR", "value realisation"]
 
 [[case_studies]]
 id = "edge-rollout"
