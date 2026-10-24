@@ -164,7 +164,7 @@ Production has no runtime secrets. The Cloudflare account certificate
 
   | Field | Content |
   |---|---|
-  | `ts`, `kind`, `method`, `path`, `status`, `ms` | When, what (`page`, `root`, `mcp`, `other`), result, duration |
+  | `ts`, `t`, `kind`, `method`, `path`, `status`, `ms` | When (ISO and Unix seconds), what (`page`, `root`, `mcp`, `other`), result, duration |
   | `country`, `ip` | Cloudflare's `CF-IPCountry`; `CF-Connecting-IP` (else `X-Real-IP`, else the peer) cut to its /24 or /48 network |
   | `ua`, `referrer` | Browser (300 characters); referrer without query or fragment |
   | `session` | `Mcp-Session-Id`, which ties a session's calls together |

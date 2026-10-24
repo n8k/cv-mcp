@@ -501,6 +501,7 @@ def test_page_visit_is_logged_with_cloudflare_details(visits):
         assert http.get("/", headers=cf).status_code == 200
     [v] = visits()
     assert v["event"] == "visit" and v["kind"] == "page" and v["status"] == 200
+    assert isinstance(v["t"], float)
     assert v["country"] == "JP"
     assert v["ip"] == "203.0.113.0"  # network only
     assert v["ua"] == "Mozilla/5.0 test"

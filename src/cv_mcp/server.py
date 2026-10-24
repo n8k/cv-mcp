@@ -695,6 +695,7 @@ class VisitLog:
         record: dict[str, Any] = {
             "event": "visit",
             "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+            "t": round(time.time(), 3),  # numeric, so Loki can unwrap it (session duration)
             "kind": kind,
             "method": scope.get("method"),
             "path": path,
