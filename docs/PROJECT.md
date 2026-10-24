@@ -137,7 +137,7 @@ cv-mcp | python | yes | needs FastMCP
 
 ## Sources
 
-- research/BRAINSTORM.md
+- docs/BRAINSTORM.md
 - Azure Container Apps pricing: https://azure.microsoft.com/pricing/details/container-apps/
 - Cloud Run pricing: https://cloud.google.com/run/pricing
 - Render free tier: https://render.com/docs/free

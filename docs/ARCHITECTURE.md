@@ -88,7 +88,7 @@ Code changes from the current repo:
 | `POST/GET /mcp` | testing, production | Read-only MCP (Streamable HTTP) |
 | `/control/mcp` | testing only | Control MCP; requires `Authorization: Bearer <CV_MCP_CONTROL_TOKEN>` |
 | `GET /health` | testing, production | Returns `{"status":"ok"}` once the CV file parses |
-| `GET /` | testing, production | Landing page for browsers (`index.html`: the server URL and how to connect from Claude and Copilot Studio, with sample prompts); a one-line plain-text pointer to `/mcp` for other clients |
+| `GET /` | testing, production | Landing page for browsers (`src/cv_mcp/index.html`: the server URL and how to connect from Claude and Copilot Studio, with sample prompts); a one-line plain-text pointer to `/mcp` for other clients |
 
 Read-only MCP surface:
 
