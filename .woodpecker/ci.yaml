@@ -63,11 +63,18 @@ steps:
     commands:
       - '"$(nix build --no-link --print-out-paths .#image)" > image.tar'
 
+  # The vulnerability DB is kept in the host's /var/cache/woodpecker/trivy (cicd.nix), so
+  # only changes are downloaded, not the whole DB on every run. Secret scanning is off:
+  # the image holds only Nix store paths and cv.toml, and gitleaks covers the repo.
   - name: scan
     <<: [*host_nix, *on_main]
+    volumes:
+      - /nix:/nix:ro
+      - /var/cache/woodpecker/trivy:/trivy-cache
     commands:
       - >-
         nix develop .#ci -c trivy image --input image.tar --ignorefile .trivyignore.yaml
+        --cache-dir /trivy-cache --scanners vuln --timeout 15m --skip-version-check
         --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress
 
   - name: publish
