@@ -3,8 +3,8 @@
   "project_name": "cv-mcp",
   "skeleton": {
     "docs_sha256": {
-      "ARCHITECTURE.md": "cf6b90d71fe88827148eecab3bcdb5c3d96b19aac87e5757bbfdb0222575bd42",
-      "PROJECT.md": "5cf47b0d49277f75669e3077481f3ea05d173ba3bc17c4ef886e5ace3a916382"
+      "ARCHITECTURE.md": "b09d90b87f4d2349fc8312601ea0c32ec6c2ea4feb03fab7568fbc09fd99d63e",
+      "PROJECT.md": "98f10aae02d5bf79c14b7cea251710f09d43a31d71ba038a72c246b9923ec813"
     },
     "apps": [
       {"name": "cv-mcp", "language": "python", "image": true, "reason": "needs FastMCP"}
