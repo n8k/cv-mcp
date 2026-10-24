@@ -217,8 +217,8 @@ Host-level MCP servers (Gitea, Grafana, Woodpecker) belong to `cicd.nix`.
 
 | What | Why |
 |---|---|
-| FastMCP 4.1.3 and 8 dependencies are wheel derivations in `nix/python-packages.nix` | nixos-26.05 has fastmcp 3.2.3 and mcp 1.26.0. Added beside the Python set (no overrides), so the rest stay cache hits; `certifi`, `idna`, `aiofile` pins relaxed |
-| `.trivyignore.yaml` accepts 13 findings | All in nixpkgs-provided packages (aiohttp, anyio, certifi, cryptography, python-multipart, starlette, urllib3) that cannot be bumped without overriding the set. Each has a reason and expires 2026-11-22, so the scan fails again and forces a re-check after `nix flake update` |
+| FastMCP 4.1.3, 8 dependencies and truststore are wheel derivations in `nix/python-packages.nix` | nixos-26.05 has fastmcp 3.2.3 and mcp 1.26.0. Added beside the Python set (no overrides), so the rest stay cache hits; `certifi`, `idna`, `aiofile` pins relaxed; truststore because nixpkgs' version declares its test tools (aiohttp, requests, …) as runtime dependencies |
+| `.trivyignore.yaml` accepts 7 findings | All in nixpkgs-provided packages (anyio, certifi, cryptography, python-multipart, starlette) that cannot be bumped without overriding the set. Each has a reason and expires 2026-11-22, so the scan fails again and forces a re-check after `nix flake update`. aiohttp, urllib3 and brotli used to be listed too; they left the image with the clean truststore wheel |
 | `skopeo --insecure-policy` | The step container has no `/etc/containers/policy.json`; this is the same accept-anything policy skopeo ships as its default |
 | Testing deploys with compose, not oci-containers | ARCHITECTURE.md says "oci-container"; the oci-containers method needs a Nix commit and rebuild per deploy, which contradicts M4 (deploy on push). Compose is the skill default and what hippo/321fire use |
 | Testing hostname `cv-mcp.local`, not `cv-mcp.testing` | Named that way in ARCHITECTURE.md and M4 |
