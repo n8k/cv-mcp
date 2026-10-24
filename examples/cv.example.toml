@@ -1,5 +1,5 @@
 # Example CV for testing the server. Every person, company detail and number
-# here is fictional. Run with:  CV_PATH=examples/cv.example.toml python server.py
+# here is fictional. Run with:  CV_PATH=examples/cv.example.toml python src/cv_mcp/server.py
 
 [person]
 name = "Alex Morgan"

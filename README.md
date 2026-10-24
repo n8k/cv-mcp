@@ -30,7 +30,7 @@ Control endpoint, `/control/mcp` — only when `CV_MCP_CONTROL_TOKEN` is set
 | `reload` | Re-reads the file and reports what was loaded |
 
 `GET /health` returns 200 when the CV file parses, 503 otherwise. `GET /` is a
-landing page for browsers (`index.html`: server URL, connect steps for Claude and
+landing page for browsers (`src/cv_mcp/index.html`: server URL, connect steps for Claude and
 Copilot Studio, sample prompts), filled in from `cv.toml`; other clients get a
 one-line plain-text pointer.
 
@@ -52,15 +52,15 @@ FastMCP and pytest; `nix run` to start the server):
 
 ```bash
 nix develop
-python server.py                                     # http://localhost:8000/mcp
-CV_PATH=examples/cv.example.toml python server.py    # fictional example CV
-CV_MCP_CONTROL_TOKEN=dev python server.py            # also serves /control/mcp
-CV_TRANSPORT=stdio python server.py                  # stdio, for local clients
+python src/cv_mcp/server.py                                   # http://localhost:8000/mcp
+CV_PATH=examples/cv.example.toml python src/cv_mcp/server.py  # fictional example CV
+CV_MCP_CONTROL_TOKEN=dev python src/cv_mcp/server.py          # also serves /control/mcp
+CV_TRANSPORT=stdio python src/cv_mcp/server.py                # stdio, for local clients
 ```
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CV_PATH` | `cv.toml` next to `server.py` | CV file to serve |
+| `CV_PATH` | `cv.toml` at the repo root (next to `server.py` in the package) | CV file to serve |
 | `CV_MCP_CONTROL_TOKEN` | unset | Enables `/control/mcp` |
 | `HOST`, `PORT` | `0.0.0.0`, `8000` | Bind address |
 | `CV_TRANSPORT` | HTTP | `stdio` to run over stdio |
@@ -77,7 +77,7 @@ nix flake check            # what CI runs: the suite as a Nix build
 Both tiers run on the Pi from the same image: testing on the home network, and
 production publicly at `https://n8k.org` through a Cloudflare Tunnel. The image is
 built by the flake (`nix build .#image`, no Dockerfile). Pipeline, tiers,
-secrets and runbook: [PIPELINE.md](PIPELINE.md); design:
+secrets and runbook: [docs/PIPELINE.md](docs/PIPELINE.md); design:
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Connect

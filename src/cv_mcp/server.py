@@ -9,7 +9,7 @@ Endpoints
   /health         200 when the CV file parses, 503 otherwise
 
 Environment
-  CV_PATH                 CV file (default: cv.toml next to this file)
+  CV_PATH                 CV file (default: cv.toml next to this file, else at the repo root)
   CV_MCP_CONTROL_TOKEN    enables /control/mcp; clients send "Authorization: Bearer <token>"
   HOST, PORT              bind address (default 0.0.0.0:8000)
   CV_TRANSPORT=stdio      run over stdio instead of HTTP
@@ -37,8 +37,14 @@ from starlette.routing import Mount
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 
+def _default_cv_path() -> Path:
+    """The package ships cv.toml next to this file; in a checkout it sits at the repo root."""
+    beside = Path(__file__).with_name("cv.toml")
+    return beside if beside.exists() else Path(__file__).resolve().parents[2] / "cv.toml"
+
+
 def cv_path() -> Path:
-    return Path(os.environ.get("CV_PATH", Path(__file__).with_name("cv.toml")))
+    return Path(os.environ.get("CV_PATH", _default_cv_path()))
 
 
 def load_cv() -> dict[str, Any]:
