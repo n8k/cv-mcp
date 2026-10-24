@@ -77,7 +77,7 @@ nix flake check            # what CI runs: the suite as a Nix build
 Both tiers run on the Pi from the same image: testing on the home network, and
 production publicly at `https://n8k.org` through a Cloudflare Tunnel. The image is
 built by the flake (`nix build .#image`, no Dockerfile). Pipeline, tiers,
-secrets and runbook: [PIPELINE.md](PIPELINE.md); design:
+secrets and runbook: [docs/PIPELINE.md](docs/PIPELINE.md); design:
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Connect
