@@ -8,6 +8,12 @@ Endpoints
   /control/mcp    control MCP, only when CV_MCP_CONTROL_TOKEN is set (testing tier)
   /health         200 when the CV file parses, 503 otherwise
 
+Visit log
+  One JSON line per request on stdout ("event": "visit"), for the Grafana dashboard:
+  time, path, status, duration, country, truncated IP, browser, referrer, MCP session,
+  and for MCP calls the method, tool, arguments and result (capped). /health is not
+  logged, nor anything sent to /control. The host keeps logs for 30 days.
+
 Environment
   CV_PATH                 CV file (default: cv.toml next to this file, else at the repo root)
   CV_MCP_CONTROL_TOKEN    enables /control/mcp; clients send "Authorization: Bearer <token>"
@@ -19,12 +25,17 @@ from __future__ import annotations
 
 import hmac
 import html
+import ipaddress
 import json
+import logging
 import os
 import re
 import string
+import sys
+import time
 import tomllib
 from contextlib import AsyncExitStack, asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -34,7 +45,7 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from starlette.routing import Mount
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
 def _default_cv_path() -> Path:
@@ -121,7 +132,8 @@ mcp = FastMCP(
         f"This server is the CV of {_candidate_name()}. Use get_profile first, "
         "then the other tools to answer questions about their experience, skills, "
         "case studies and fit for roles. Only state what the tools return; if "
-        "something is not in the CV, say so rather than guessing."
+        "something is not in the CV, say so rather than guessing. Tool calls and "
+        "their results are logged for 30 days."
     ),
 )
 
@@ -501,10 +513,218 @@ class BearerTokenGuard:
         await self.app(scope, receive, send)
 
 
+# ---------- Visit log ----------
+
+visit_log = logging.getLogger("cv_mcp.visits")
+if not visit_log.handlers:
+    _handler = logging.StreamHandler(sys.stdout)
+    _handler.setFormatter(logging.Formatter("%(message)s"))
+    visit_log.addHandler(_handler)
+    visit_log.setLevel(logging.INFO)
+    visit_log.propagate = False
+
+LOG_CAP = 4000  # characters kept of each logged argument set or result
+BODY_CAP = 1 << 20  # request and response bytes read for logging; larger ones are not parsed
+UNLOGGED = ("/health", "/control")
+
+
+def _capped(value: Any) -> Any:
+    text = json.dumps(value, ensure_ascii=False, default=str)
+    return value if len(text) <= LOG_CAP else text[:LOG_CAP] + "…"
+
+
+def _truncated_ip(ip: str | None) -> str | None:
+    """Network part only: IPv4 /24, IPv6 /48. Enough for a country or network, not a household."""
+    try:
+        addr = ipaddress.ip_address((ip or "").strip())
+    except ValueError:
+        return None
+    prefix = 24 if addr.version == 4 else 48
+    return str(ipaddress.ip_network(f"{addr}/{prefix}", strict=False).network_address)
+
+
+def _referrer(value: str) -> str | None:
+    """Origin and path only; a query string can carry anything."""
+    return value.split("?")[0].split("#")[0][:300] or None
+
+
+def _rpc_requests(body: bytes) -> list[dict]:
+    """The JSON-RPC messages in an MCP POST, summarised for the log."""
+    try:
+        parsed = json.loads(body)
+    except ValueError:
+        return []
+    out = []
+    for msg in parsed if isinstance(parsed, list) else [parsed]:
+        if not isinstance(msg, dict) or "method" not in msg:
+            continue
+        params = msg.get("params") or {}
+        entry: dict[str, Any] = {"method": msg["method"]}
+        if "id" in msg:
+            entry["id"] = msg["id"]
+        if msg["method"] == "initialize":
+            info = params.get("clientInfo") or {}
+            entry["client"] = {k: str(info.get(k, ""))[:100] for k in ("name", "version")}
+        elif msg["method"] == "tools/call":
+            entry["tool"] = params.get("name")
+            entry["args"] = _capped(params.get("arguments") or {})
+        elif msg["method"] == "resources/read":
+            entry["uri"] = params.get("uri")
+        elif msg["method"] == "prompts/get":
+            entry["prompt"] = params.get("name")
+            entry["args"] = _capped(params.get("arguments") or {})
+        out.append(entry)
+    return out
+
+
+def _rpc_responses(body: bytes, content_type: str) -> list[dict]:
+    """JSON-RPC responses from a JSON or server-sent-events MCP reply."""
+    text = body.decode("utf-8", "replace")
+    chunks = [line[5:] for line in text.splitlines() if line.startswith("data:")] if "event-stream" in content_type else [text]
+    out = []
+    for chunk in chunks:
+        try:
+            parsed = json.loads(chunk)
+        except ValueError:
+            continue
+        out += [m for m in (parsed if isinstance(parsed, list) else [parsed]) if isinstance(m, dict) and "id" in m]
+    return out
+
+
+def _outcome(response: dict) -> dict:
+    if "error" in response:
+        return {"error": _capped((response["error"] or {}).get("message"))}
+    result = response.get("result") or {}
+    if "structuredContent" in result:
+        shown = result["structuredContent"]
+    elif "content" in result:
+        shown = [c.get("text", c.get("type")) for c in result["content"] if isinstance(c, dict)]
+    elif "contents" in result:  # resources/read
+        shown = [c.get("uri") for c in result["contents"] if isinstance(c, dict)]
+    elif "messages" in result:  # prompts/get
+        shown = f"{len(result['messages'])} message(s)"
+    else:
+        return {}
+    out: dict[str, Any] = {"result": _capped(shown)}
+    if result.get("isError"):
+        out["is_error"] = True
+    return out
+
+
+def _replay(buffered: list[Message], receive: Receive) -> Receive:
+    """A receive that returns the already-read messages first, then the real stream."""
+
+    async def replay() -> Message:
+        return buffered.pop(0) if buffered else await receive()
+
+    return replay
+
+
+class VisitLog:
+    """Writes one "visit" JSON line per HTTP request. Never changes a request or response,
+    and a logging failure never fails a request."""
+
+    LOGGED_RESULTS = {"tools/call", "resources/read", "prompts/get"}
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        path = scope.get("path", "")
+        if scope["type"] != "http" or path.startswith(UNLOGGED):
+            await self.app(scope, receive, send)
+            return
+
+        started = time.monotonic()
+        headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope.get("headers", [])}
+        is_mcp_post = scope.get("method") == "POST" and path.rstrip("/").endswith("/mcp")
+
+        # MCP requests are small JSON-RPC messages: read the body once, hand the same
+        # messages to the app, then pass any later ones (disconnect) straight through.
+        rpc: list[dict] = []
+        if is_mcp_post:
+            buffered: list[Message] = []
+            body = b""
+            while True:
+                message = await receive()
+                buffered.append(message)
+                if message["type"] != "http.request":
+                    break
+                if len(body) <= BODY_CAP:
+                    body += message.get("body", b"")
+                if not message.get("more_body"):
+                    break
+            if len(body) <= BODY_CAP:
+                rpc = _rpc_requests(body)
+            receive = _replay(buffered, receive)
+
+        capture = any(r["method"] in self.LOGGED_RESULTS for r in rpc)
+        reply: dict[str, Any] = {"status": None, "type": "", "session": None, "body": b""}
+
+        async def watch(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                reply["status"] = message["status"]
+                for k, v in message.get("headers", []):
+                    name = k.decode("latin-1").lower()
+                    if name == "content-type":
+                        reply["type"] = v.decode("latin-1")
+                    elif name == "mcp-session-id":
+                        reply["session"] = v.decode("latin-1")
+            elif message["type"] == "http.response.body" and capture and len(reply["body"]) <= BODY_CAP:
+                reply["body"] += message.get("body", b"")
+            await send(message)
+
+        try:
+            await self.app(scope, receive, watch)
+        finally:
+            try:
+                self._write(scope, headers, rpc, reply, started)
+            except Exception:  # noqa: BLE001 — the log is best effort
+                pass
+
+    def _write(self, scope: Scope, headers: dict, rpc: list[dict], reply: dict, started: float) -> None:
+        path = scope.get("path", "")
+        client = scope.get("client") or ("", 0)
+        ip = headers.get("cf-connecting-ip") or headers.get("x-real-ip") or client[0]
+        if path == "/":
+            kind = "page" if "text/html" in headers.get("accept", "") else "root"
+        elif path.rstrip("/").endswith("/mcp"):
+            kind = "mcp"
+        else:
+            kind = "other"
+        record: dict[str, Any] = {
+            "event": "visit",
+            "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+            "t": round(time.time(), 3),  # numeric, so Loki can unwrap it (session duration)
+            "kind": kind,
+            "method": scope.get("method"),
+            "path": path,
+            "status": reply["status"],
+            "ms": round((time.monotonic() - started) * 1000, 1),
+            "country": headers.get("cf-ipcountry"),
+            "ip": _truncated_ip(ip),
+            "ua": headers.get("user-agent", "")[:300] or None,
+            "referrer": _referrer(headers.get("referer", "")),
+            "session": headers.get("mcp-session-id") or reply["session"],
+        }
+        if rpc:
+            if reply["body"] and len(reply["body"]) <= BODY_CAP:
+                by_id = {r["id"]: r for r in _rpc_responses(reply["body"], reply["type"])}
+                for entry in rpc:
+                    if entry["method"] in self.LOGGED_RESULTS and entry.get("id") in by_id:
+                        entry.update(_outcome(by_id[entry["id"]]))
+            record["rpc"] = rpc
+        visit_log.info(json.dumps({k: v for k, v in record.items() if v is not None}, ensure_ascii=False, default=str))
+
+
 # ---------- App assembly ----------
 
-def build_app() -> Starlette:
-    """Read-only app, plus the control app under /control when a token is set."""
+def build_app() -> ASGIApp:
+    """Read-only app, plus the control app under /control when a token is set, behind the visit log."""
+    return VisitLog(_routes())
+
+
+def _routes() -> Starlette:
     main_app = mcp.http_app(path="/mcp")
     token = os.environ.get("CV_MCP_CONTROL_TOKEN", "")
     if not token:

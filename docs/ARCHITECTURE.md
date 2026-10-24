@@ -78,6 +78,8 @@ Code changes from the current repo:
   redeploy; nothing persists under `/opt/cicd/cv-mcp/testing/` beyond what the
   pipeline places there.
 - Production: the file is baked into the image; no volume.
+- Visit log: written to stdout only (see Observability). The container stores
+  nothing.
 - Backups: the Git repo is the backup.
 - `examples/cv.example.toml` is test data only, never served in production.
 
@@ -157,6 +159,22 @@ Production has no runtime secrets. The Cloudflare account certificate
   `cv-mcp-production`).
 - Alert: `ProjectProbeFailed` fires after 3 minutes of failed probes, which
   covers "production `/health` failing twice in a row".
+- Visit log: `VisitLog`, an ASGI middleware in front of the app, writes one JSON
+  line per request (`"event": "visit"`) to stdout:
+
+  | Field | Content |
+  |---|---|
+  | `ts`, `t`, `kind`, `method`, `path`, `status`, `ms` | When (ISO and Unix seconds), what (`page`, `root`, `mcp`, `other`), result, duration |
+  | `country`, `ip` | Cloudflare's `CF-IPCountry`; `CF-Connecting-IP` (else `X-Real-IP`, else the peer) cut to its /24 or /48 network |
+  | `ua`, `referrer` | Browser (300 characters); referrer without query or fragment |
+  | `session` | `Mcp-Session-Id`, which ties a session's calls together |
+  | `rpc[]` | Per JSON-RPC message: `method`; `client` (name, version) on `initialize`; `tool` and `args` on `tools/call`; `uri` or `prompt`; and `result` or `error` from the reply |
+
+  Arguments and results are capped at 4,000 characters each. `/health` (probe
+  noise) and `/control` are not logged; no other request header is read into
+  the log. journald (tag `cv-mcp-<tier>`) carries it to Loki through Alloy;
+  both keep 30 days. The Grafana dashboard "CV visitors" in the NixOS repo
+  reads it with LogQL.
 
 ## Security
 
@@ -178,6 +196,10 @@ Production has no runtime secrets. The Cloudflare account certificate
 - Content safety: `cv.toml` is public by design; only LinkedIn-level content
   belongs in it.
 - Supply chain: dependency versions pinned by the flake lock.
+- Visit log: holds personal data (network-level IPs, job descriptions passed
+  to `assess_role_fit`). It stays on the Pi (journal and Loki, LAN-only Grafana),
+  expires after 30 days, and is announced on the landing page and in the MCP
+  instructions. A logging failure never fails a request.
 
 ## Alternatives considered
 

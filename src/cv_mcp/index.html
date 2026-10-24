@@ -124,6 +124,7 @@
     margin-top: 3.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
     color: var(--muted); font-size: 0.9rem; display: flex; gap: 1rem; flex-wrap: wrap; justify-content: space-between;
   }
+  footer .notice { flex-basis: 100%; font-size: 0.8rem; opacity: 0.8; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -206,6 +207,7 @@
   <footer>
     <span>$name$linkedin · <a href="https://github.com/n8k/cv-mcp" rel="noopener">Source Code</a></span>
     <span>Served from a Raspberry Pi through a Cloudflare Tunnel. Vibe coded with Claude on the bus ride home.</span>
+    <span class="notice">Visits and MCP tool calls (arguments and results) are logged for 30 days to see how this CV is used. IP addresses are shortened to their network.</span>
   </footer>
 </main>
 <script>

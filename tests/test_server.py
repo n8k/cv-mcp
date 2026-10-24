@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from pathlib import Path
 
 import pytest
@@ -461,3 +462,116 @@ def test_prompt_without_job_description_asks_for_one():
         async with Client(server.mcp) as c:
             return (await c.get_prompt("interview_candidate")).messages[0].content.text
     assert "Ask me for the job description" in asyncio.run(run())
+
+
+# ---------- Visit log ----------
+
+@pytest.fixture
+def visits():
+    """The visit log's JSON lines, as dicts."""
+    lines: list[str] = []
+
+    class Sink(logging.Handler):
+        def emit(self, record):
+            lines.append(record.getMessage())
+
+    sink = Sink()
+    server.visit_log.addHandler(sink)
+    yield lambda: [json.loads(line) for line in lines]
+    server.visit_log.removeHandler(sink)
+
+
+def mcp_session(http, headers=None):
+    """initialize + initialized; returns the headers that carry the session."""
+    r = http.post("/mcp", json=INIT, headers={**MCP_HEADERS, **(headers or {})})
+    session = {**MCP_HEADERS, **(headers or {}), "mcp-session-id": r.headers["mcp-session-id"]}
+    http.post("/mcp", json={"jsonrpc": "2.0", "method": "notifications/initialized"}, headers=session)
+    return session
+
+
+def test_page_visit_is_logged_with_cloudflare_details(visits):
+    cf = {
+        "Accept": "text/html",
+        "CF-Connecting-IP": "203.0.113.77",
+        "CF-IPCountry": "JP",
+        "User-Agent": "Mozilla/5.0 test",
+        "Referer": "https://www.linkedin.com/in/someone?trk=secret#x",
+    }
+    with TestClient(server.build_app()) as http:
+        assert http.get("/", headers=cf).status_code == 200
+    [v] = visits()
+    assert v["event"] == "visit" and v["kind"] == "page" and v["status"] == 200
+    assert isinstance(v["t"], float)
+    assert v["country"] == "JP"
+    assert v["ip"] == "203.0.113.0"  # network only
+    assert v["ua"] == "Mozilla/5.0 test"
+    assert v["referrer"] == "https://www.linkedin.com/in/someone"  # no query or fragment
+
+
+def test_mcp_session_logs_client_tool_arguments_and_result(visits):
+    with TestClient(server.build_app()) as http:
+        session = mcp_session(http)
+        call_ = {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "search_cv", "arguments": {"query": "python"}}}
+        r = http.post("/mcp", json=call_, headers=session)
+        assert r.status_code == 200
+    init, _, tool = visits()
+    sid = session["mcp-session-id"]
+    assert init["session"] == sid and tool["session"] == sid
+    assert init["rpc"] == [{"method": "initialize", "id": 1, "client": {"name": "test", "version": "0"}}]
+    [entry] = tool["rpc"]
+    assert entry["tool"] == "search_cv" and entry["args"] == {"query": "python"}
+    assert entry["result"]["result"] == call(server.mcp, "search_cv", {"query": "python"})
+
+
+def test_long_arguments_and_results_are_capped(visits):
+    jd = "x" * (server.LOG_CAP * 2)
+    with TestClient(server.build_app()) as http:
+        session = mcp_session(http)
+        call_ = {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "search_cv", "arguments": {"query": jd}}}
+        http.post("/mcp", json=call_, headers=session)
+    entry = visits()[-1]["rpc"][0]
+    assert isinstance(entry["args"], str) and len(entry["args"]) <= server.LOG_CAP + 1
+
+
+def test_tool_errors_are_logged(visits):
+    with TestClient(server.build_app()) as http:
+        session = mcp_session(http)
+        call_ = {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "get_case_study", "arguments": {"case_id": "nope"}}}
+        http.post("/mcp", json=call_, headers=session)
+    entry = visits()[-1]["rpc"][0]
+    assert entry.get("is_error") or "error" in entry
+
+
+def test_health_and_control_are_never_logged(visits, monkeypatch):
+    monkeypatch.setenv("CV_MCP_CONTROL_TOKEN", "s3cret")
+    with TestClient(server.build_app()) as http:
+        http.get("/health")
+        good = {**MCP_HEADERS, "Authorization": "Bearer s3cret"}
+        assert http.post("/control/mcp", json=INIT, headers=good).status_code == 200
+    assert visits() == []
+
+
+def test_log_never_contains_request_headers_it_does_not_name(visits):
+    with TestClient(server.build_app()) as http:
+        http.post("/mcp", json=INIT, headers={**MCP_HEADERS, "Authorization": "Bearer hunter2", "Cookie": "a=b"})
+    text = json.dumps(visits())
+    assert "hunter2" not in text and "a=b" not in text
+
+
+@pytest.mark.parametrize(
+    ("ip", "expected"),
+    [
+        ("198.51.100.23", "198.51.100.0"),
+        ("2001:db8:1234:5678::1", "2001:db8:1234::"),
+        ("not-an-ip", None),
+        (None, None),
+    ],
+)
+def test_truncated_ip(ip, expected):
+    assert server._truncated_ip(ip) == expected
+
+
+def test_landing_page_has_the_logging_notice():
+    with TestClient(server.build_app()) as http:
+        page = http.get("/", headers={"Accept": "text/html"}).text
+    assert "logged for 30 days" in page

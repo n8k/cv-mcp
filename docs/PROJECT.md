@@ -25,10 +25,14 @@ demonstrates AI-native work instead of describing it. The repository is
   cost is the `n8k.org` domain.
 - G5. Changes reach production only through testing on the Pi and an explicit
   human approval.
+- G6. Nate can see how the CV is used: page visits, MCP sessions, the tools
+  called with their arguments and results, in Grafana, kept for 30 days.
 
 ## Non-goals
 
-- Usage logging or analytics of reviewer calls.
+- Identifying visitors: no login, cookies or tracking scripts. MCP traffic
+  arrives from the AI provider's servers, so its IP and country are the
+  provider's; the reviewer's own prompt and the AI's final answer are never seen.
 - Authentication on the public endpoint.
 - A contact or booking tool.
 - YAML or JSON CV formats.
@@ -62,6 +66,9 @@ demonstrates AI-native work instead of describing it. The repository is
 | R13 | Fictional example CV kept in `examples/` for tests | should | first build session |
 | R14 | `assess_role_fit` accepts role criteria supplied by the caller; the CV file holds only generic defaults that name no role | must | Nate, after M2 |
 | R15 | Public contact email published; no phone number or street address | must | Nate, after M2 |
+| R16 | One JSON "visit" log line per request: time, path, status, duration, Cloudflare country, IP truncated to /24 (IPv6 /48), browser, referrer without query, MCP session, client name, tool, arguments and result (each capped at 4,000 characters). `/health` and `/control` are not logged; request headers other than those named are never logged | must | Nate, 2026-10-24 |
+| R17 | The landing page and the MCP instructions say that visits and tool calls are logged for 30 days | must | Nate, 2026-10-24 |
+| R18 | Grafana dashboard "CV visitors" built from the visit log, provisioned from the NixOS repo | should | Nate, 2026-10-24 |
 
 ## Apps
 
@@ -108,7 +115,9 @@ cv-mcp | python | yes | needs FastMCP
 - Gitea on the Pi is the pipeline's source of truth and push-mirrors to the
   public GitHub repo `n8k/cv-mcp` (agent's assumption; overrule if GitHub
   should stay primary).
-- Production keeps no data, so it needs no backups beyond the Git repo.
+- Production keeps no data of its own, so it needs no backups beyond the Git
+  repo. The visit log lives in the host's journal and Loki, both 30 days, and is
+  not backed up.
 
 ## Open questions
 
@@ -134,6 +143,7 @@ cv-mcp | python | yes | needs FastMCP
 | 2026-10-22 | Reviewers supply role-fit criteria | Criteria in a public file would reveal the role; criteria written from the CV always match | Real criteria in `cv.toml` |
 | 2026-10-23 | Production on the Pi, public at `n8k.org` through a Cloudflare Tunnel | Azure's setup was too heavy for a small public service; free; production runs byte-for-byte the tested image; no emulation or second registry; always on, so no cold start | Azure Container Apps (chosen 2026-10-22, dropped), Koyeb (0.1 vCPU free instance), Google Cloud Run (billing account, Artifact Registry), Render (one-minute cold start), Oracle Cloud Always Free (a VM to run, hard sign-up) |
 | 2026-10-23 | One aarch64 image for both tiers | Both tiers run on the Pi | x86_64 image built under emulation for a cloud host |
+| 2026-10-24 | Log visits and MCP calls to stdout, journald and Loki; 30 days; truncated IPs; notice on the page; no time-on-page beacon | See who uses the CV and how, with what is already running and no extra store; truncated IPs and a notice keep it proportionate (APPI, GDPR) | Full IPs; a SQLite log on a volume for longer history; a JavaScript beacon for time on page; Cloudflare Web Analytics |
 
 ## Sources
 
