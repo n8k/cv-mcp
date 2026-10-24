@@ -83,8 +83,8 @@ Fill in after each deploy (the SHA is also the image tag).
 
 | Tier | Where | Image | Deployed SHA | Date |
 |---|---|---|---|---|
-| testing | Pi, `/opt/cicd/cv-mcp/testing`, port 8250 | `gitea.local/nate/cv-mcp:<sha>` | `470d90461bd6b4d7b48d06ff39029ac986d28b23` (main after #13) | 2026-10-24 |
-| production | Pi, `/opt/cicd/cv-mcp/production`, port 8251 | `gitea.local/nate/cv-mcp:<sha>` | `470d90461bd6b4d7b48d06ff39029ac986d28b23` (main after #13: Copilot and OKR content, search over profile and tags, no brotli) | 2026-10-24 |
+| testing | Pi, `/opt/cicd/cv-mcp/testing`, port 8250 | `gitea.local/nate/cv-mcp:<sha>` | `b97345e240294ad637fc3e686696782d0ea19ae1` (main after #15) | 2026-10-24 |
+| production | Pi, `/opt/cicd/cv-mcp/production`, port 8251 | `gitea.local/nate/cv-mcp:<sha>` | `b97345e240294ad637fc3e686696782d0ea19ae1` (main after #15: repo layout under `src/` and `docs/`, cached Trivy scan; same content as `470d904`) | 2026-10-24 |
 
 Which commit is running: `cat /opt/cicd/cv-mcp/<tier>/release.env` on the Pi.
 
