@@ -53,3 +53,11 @@ vulnerabilities:
   - id: CVE-2026-97689
     statement: urllib3 client chunk parser; cv-mcp makes no outbound requests
     expired_at: 2026-11-22
+  - id: GHSA-9v8h-qqgm-4m35
+    statement: >-
+      brotli 1.2.0 decoder (fixed in 1.2.1; published 2026-10-22, not yet in nixos-26.05 or
+      unstable, whose one patch is a build fix). Pulled in by nixpkgs aiohttp; httpx2 imports it
+      only to decode HTTP responses to requests cv-mcp itself makes, and it makes none. uvicorn
+      and starlette never decode brotli request bodies, so no visitor input reaches the decoder.
+      Short expiry because it is critical: re-check, and drop this entry, once nixpkgs ships 1.2.1.
+    expired_at: 2026-11-07
