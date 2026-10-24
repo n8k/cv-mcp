@@ -33,6 +33,17 @@ let
     };
 
   self = {
+    # nixpkgs' truststore lists its test tools (aiohttp, httpx, pyopenssl, requests, trustme)
+    # as runtime dependencies, which pulled aiohttp and its brotli speedup into the image.
+    # Upstream truststore has no dependencies at all.
+    truststore = wheel {
+      pname = "truststore";
+      version = "0.10.4";
+      url = "https://files.pythonhosted.org/packages/19/97/56608b2249fe206a67cd573bc93cd9896e1efb9e98bce9c163bcdc704b88/truststore-0.10.4-py3-none-any.whl";
+      hash = "sha256-ra6uzxy7X03jsZWbQtQfb6tXsrFmattZ6JywtTNh2YE=";
+      dependencies = [ ];
+    };
+
     mcp-types = wheel {
       pname = "mcp-types";
       version = "2.3.0";
@@ -51,7 +62,7 @@ let
       hash = "sha256-XENYMZ8mAtmErZMYLJ/uUWDyLp2nur3ahwpefE4tw08=";
       dependencies = with ps; [
         h11
-        truststore
+        self.truststore
       ];
     };
 
@@ -65,7 +76,7 @@ let
         anyio
         self.httpcore2
         idna
-        truststore
+        self.truststore
       ];
       pythonRelaxDeps = [ "idna" ];
     };

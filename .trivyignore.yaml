@@ -6,6 +6,10 @@
 # the fix arrives with the next `nix flake update` of the channel instead. Trivy reads the
 # upstream version from METADATA and cannot see patches nixpkgs backports.
 #
+# Before adding an entry, check that the package belongs in the image at all
+# (`nix why-depends`): brotli, aiohttp and urllib3 were here only because nixpkgs' truststore
+# declares its test tools as runtime dependencies, and a clean truststore wheel removed them.
+#
 # Each entry expires after a month, so the scan fails again and the list gets re-checked
 # against a fresh `nix flake update`. Never add a package that nix/python-packages.nix
 # provides: bump the wheel instead.
@@ -14,18 +18,6 @@
 # makes no outbound HTTP calls at runtime, and sits behind nginx (testing) or Cloudflare
 # and its tunnel (production), which terminate TLS.
 vulnerabilities:
-  - id: CVE-2026-111064
-    statement: aiohttp (via nixpkgs truststore); not used as a server or client by cv-mcp
-    expired_at: 2026-11-22
-  - id: CVE-2026-111066
-    statement: aiohttp multipart; not used by cv-mcp
-    expired_at: 2026-11-22
-  - id: CVE-2026-69244
-    statement: aiohttp client response parsing; cv-mcp makes no outbound requests
-    expired_at: 2026-11-22
-  - id: GHSA-2g87-pp6c-29x5
-    statement: aiohttp; not used by cv-mcp
-    expired_at: 2026-11-22
   - id: CVE-2026-63374
     statement: anyio TLS client hostname check; cv-mcp opens no TLS client connections
     expired_at: 2026-11-22
@@ -47,17 +39,3 @@ vulnerabilities:
   - id: CVE-2026-54283
     statement: starlette request.form(); cv-mcp never calls it
     expired_at: 2026-11-22
-  - id: CVE-2026-97687
-    statement: urllib3 via HTTPS proxy; cv-mcp makes no outbound requests
-    expired_at: 2026-11-22
-  - id: CVE-2026-97689
-    statement: urllib3 client chunk parser; cv-mcp makes no outbound requests
-    expired_at: 2026-11-22
-  - id: GHSA-9v8h-qqgm-4m35
-    statement: >-
-      brotli 1.2.0 decoder (fixed in 1.2.1; published 2026-10-22, not yet in nixos-26.05 or
-      unstable, whose one patch is a build fix). Pulled in by nixpkgs aiohttp; httpx2 imports it
-      only to decode HTTP responses to requests cv-mcp itself makes, and it makes none. uvicorn
-      and starlette never decode brotli request bodies, so no visitor input reaches the decoder.
-      Short expiry because it is critical: re-check, and drop this entry, once nixpkgs ships 1.2.1.
-    expired_at: 2026-11-07
