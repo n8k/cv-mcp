@@ -44,6 +44,28 @@ let
       dependencies = [ ];
     };
 
+    # nixpkgs has 2.8.0 (CVE-2026-114605, fixed in 2.9.0). Pulled in by email-validator,
+    # which pydantic[email] needs; a hard requirement of fastmcp-slim.
+    dnspython = wheel {
+      pname = "dnspython";
+      version = "2.9.0";
+      url = "https://files.pythonhosted.org/packages/10/02/cdcc9b7c051786a103c3b09e1003a82fa0c66bcb91ffbdabcfbf7b4163b9/dnspython-2.9.0-py3-none-any.whl";
+      hash = "sha256-mkrtuDPDwbSSFNBNRNMDKrepE198HSmlSbT/eP2C/ak=";
+      dependencies = [ ];
+    };
+
+    # Same version as nixpkgs, built against the dnspython above instead of nixpkgs'.
+    email-validator = wheel {
+      pname = "email-validator";
+      version = "2.3.0";
+      url = "https://files.pythonhosted.org/packages/de/15/545e2b6cf2e3be84bc1ed85613edd75b8aea69807a71c26f4ca6a9258e82/email_validator-2.3.0-py3-none-any.whl";
+      hash = "sha256-gPE/YjQT5rGXrnO7EL9OsJCPr1Ca2DYsXt6wvn/UULQ=";
+      dependencies = [
+        self.dnspython
+        ps.idna
+      ];
+    };
+
     mcp-types = wheel {
       pname = "mcp-types";
       version = "2.3.0";
@@ -144,41 +166,40 @@ let
       version = "4.1.3";
       url = "https://files.pythonhosted.org/packages/4e/ff/a7feaeb130a2003700789ce32e933b4c2ae00fc7c264642e57ab12e4684f/fastmcp_slim-4.1.3-py3-none-any.whl";
       hash = "sha256-ga+GmTMcM9Q4yvhbaUfzbfbi8EEY5vMYygA3T9mv6po=";
-      # Base plus the client and server extras (what `fastmcp` itself installs).
-      dependencies =
-        with ps;
-        [
-          self.mcp-types
-          platformdirs
-          pydantic-settings
-          pydantic
-          python-dotenv
-          rich
-          typing-extensions
-          authlib
-          exceptiongroup
-          self.httpx2
-          self.mcp
-          opentelemetry-api
-          self.py-key-value-aio
-          starlette
-          certifi
-          cyclopts
-          griffelib
-          joserfc
-          jsonref
-          jsonschema-path
-          self.openapi-pydantic
-          packaging
-          pyperclip
-          python-multipart
-          pyyaml
-          self.uncalled-for
-          uvicorn
-          watchfiles
-          websockets
-        ]
-        ++ pydantic.optional-dependencies.email;
+      # Base plus the client and server extras (what `fastmcp` itself installs), except
+      # authlib: only the OAuth proxy (fastmcp.server.auth, loaded lazily) imports it, and
+      # cv-mcp has no OAuth. It carried CVE-2026-96760 (critical) and two highs.
+      dependencies = with ps; [
+        self.mcp-types
+        platformdirs
+        pydantic-settings
+        pydantic
+        python-dotenv
+        rich
+        typing-extensions
+        exceptiongroup
+        self.httpx2
+        self.mcp
+        opentelemetry-api
+        self.py-key-value-aio
+        starlette
+        certifi
+        cyclopts
+        griffelib
+        joserfc
+        jsonref
+        jsonschema-path
+        self.openapi-pydantic
+        packaging
+        pyperclip
+        python-multipart
+        pyyaml
+        self.uncalled-for
+        uvicorn
+        watchfiles
+        websockets
+        self.email-validator # pydantic[email], with the dnspython above
+      ];
       pythonRelaxDeps = [ "certifi" ];
     };
 
