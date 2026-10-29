@@ -11,7 +11,7 @@ certifications = [
 career_highlights = [
   "New operating model: key contributor to Manulife's Scaled Agile transformation. Identified value streams, coached agile release trains, introduced OKRs as a measure of success, and taught certification courses to 200+ people.",
   "AI and automation in daily operations: built Copilot prompts that turn project plans and financials into polished business cases and reports, adopted by 30 project managers and saving an estimated 4 hours per person per month, and a Power Automate approval process whose early-voting design eliminated more than 50% of executive-review meetings.",
-  "Value realisation: lead quarterly executive reviews of a $60M portfolio (50+ projects a year), holding teams accountable for budget, schedule and committed KPI/OKR outcomes.",
+  "Value realisation: lead quarterly executive reviews with the C-suite (CEO, CFO, CIO, CRO and COO) of a $60M portfolio (50+ projects a year), holding teams accountable for budget, schedule and committed KPI/OKR outcomes.",
   "Change at scale: trained 150+ Telus staff in agile as the company pivoted to software-based networks; led a cross-functional team of 160+ internal and vendor staff through a nationwide rollout at Rakuten Mobile.",
 ]
 summary = """
@@ -54,10 +54,10 @@ highlights = [
   "Scaled Agile (SAFe) transformation: key volunteer in the ongoing, company-wide transformation of the delivery model from waterfall to value streams, including the change management that goes with it. Identified value streams, introduced an OKR library that changed how business cases measure success, coached agile release trains, taught certification courses to 200+ people, and updated the governance model to enable business agility and continuous value delivery.",
   "Outcome-based business cases: replaced the iron-triangle view of success (scope, schedule, budget) with OKRs that align business cases to strategic outcomes, so proposals must define measurable business outcomes and value realisation. Even projects with no financial benefit, such as regulatory mandates, now have to prove measurable results such as reduced risk and fewer incidents.",
   "Process redesign with Power Automate: replaced in-meeting business case reviews with an online process that accepts submissions, alerts stakeholders and records auditable approvals. Versioned roll-outs of modules onto a static SharePoint page ensure stability, and early executive voting lets executives pre-read and approve in advance, eliminating more than 50% of executive meetings.",
-  "Portfolio governance and outcomes: lead pre-review and quarterly executive review meetings for a $60M portfolio (50+ projects a year); approve scope and benefit changes and coach the business team on KPI and OKR targets.",
+  "Portfolio governance and outcomes: lead pre-review and quarterly executive review meetings with the C-suite (CEO, CFO, CIO, CRO and COO) for a $60M portfolio (50+ projects a year); approve scope and benefit changes and coach the business team on KPI and OKR targets.",
   "Data-driven reporting: replaced manually built PowerPoint decks with Power BI dashboards showing real-time financials and OKRs, with exportable decks for presentations and audit archives.",
 ]
-skills = ["generative AI", "Copilot", "Power Automate", "Power BI", "SharePoint", "SAFe", "value streams", "OKR", "KPI", "portfolio management", "project governance", "process redesign"]
+skills = ["generative AI", "Copilot", "Power Automate", "Power BI", "SharePoint", "SAFe", "value streams", "OKR", "KPI", "portfolio management", "project governance", "process redesign", "change management", "risk management", "executive stakeholder management"]
 
 [[experience]]
 id = "nokia"
@@ -69,7 +69,7 @@ end = "2022-11"
 highlights = [
   "Led delivery of a 5G data-processing system for a Japanese telecom operator that automatically captures all billable network usage (roaming, data and voice-minute cap overages, toll calls, overseas packages) and feeds it to the billing system for customers' monthly statements. Live since 2022, processing half a billion data points per day.",
 ]
-skills = ["5G", "telecom", "systems integration"]
+skills = ["5G", "telecom", "systems integration", "risk management"]
 
 [[experience]]
 id = "rakuten-dept-manager"
@@ -80,8 +80,9 @@ start = "2020-06"
 end = "2021-10"
 highlights = [
   "Built the organisation: hired and led a 30-person team of engineers, designers, project managers and business analysts; planned and delivered three central data centers, each with dozens of sub-projects, over a two-year programme.",
+  "Executive reporting: reported regularly to the CTO.",
 ]
-skills = ["PMO", "team building", "data centers", "programme management"]
+skills = ["PMO", "team building", "team leadership", "data centers", "programme management", "change management", "risk management"]
 
 [[experience]]
 id = "rakuten-section-manager"
@@ -91,11 +92,11 @@ location = "Tokyo"
 start = "2020-01"
 end = "2020-06"
 highlights = [
-  "Nationwide rollout for the launch of the world's first cloud-native mobile network: set up a central staging hub and led a cross-functional team of 160+ internal and vendor staff (software, automation, staging and field) to deploy 6,000 servers to 45 colocation data centers across Japan.",
+  "Nationwide rollout for the launch of the world's first cloud-native mobile network: set up a central staging hub and led a cross-functional team of 160+ internal and vendor staff (software, automation, staging and field) to deploy 6,000 servers to 45 colocation data centers across Japan, introducing the new processes the rollout needed.",
   "Planning tools: built a capacity-planning calculator covering rack space, compute, storage, weight, power and cabling, with reusable templates and a procurement export.",
   "Automated logistics reports: built a custom pipeline using Jira, Smartsheet and Domo to manage the data-center build logistics lifecycle, from request to shipping to rack install.",
 ]
-skills = ["PMO", "vendor management", "data centers", "automation", "planning tools", "Jira", "Smartsheet", "Domo"]
+skills = ["PMO", "vendor management", "data centers", "automation", "planning tools", "Jira", "Smartsheet", "Domo", "change management", "risk management"]
 
 [[experience]]
 id = "telus-senior"
@@ -108,7 +109,7 @@ highlights = [
   "Portfolio delivery: managed a $12M portfolio of 124 projects and 9 project managers to upgrade 40 data centers, and a separate $12M+ fiber capacity programme with 5 project managers.",
   "Agile adoption: as a volunteer agile coach, trained 150+ team members as the organisation pivoted to software-based networks.",
 ]
-skills = ["portfolio management", "programme management", "fiber networks", "agile coaching"]
+skills = ["portfolio management", "programme management", "fiber networks", "agile coaching", "change management", "risk management"]
 
 [[experience]]
 id = "telus-pm"
@@ -120,7 +121,7 @@ end = "2017-04"
 highlights = [
   "First Nations internet: brought internet service to a remote community for the first time: $1M budget, tower construction, permits and subcontracts, delivered within a two-month northern summer.",
 ]
-skills = ["construction projects", "permits", "subcontract management", "budget management"]
+skills = ["construction projects", "permits", "subcontract management", "budget management", "risk management"]
 
 [[experience]]
 id = "glentel"
@@ -132,7 +133,7 @@ end = "2015-08"
 highlights = [
   "Delivered mission-critical radio systems for public-sector clients: an upgrade for the Parliamentary police across 30 historic Parliament buildings in Ottawa, a voice and data system for Vancouver's passenger railway, and a regional police radio upgrade that earned a letter of thanks from the Chief of Police.",
 ]
-skills = ["public sector", "radio systems", "security clearances", "contract negotiation"]
+skills = ["public sector", "radio systems", "security clearances", "contract negotiation", "risk management"]
 
 [[experience]]
 id = "simply-computing"
@@ -155,6 +156,10 @@ summary = "Taught English to grades 1–12 in the public school system."
 skills = ["teaching", "Japanese"]
 
 [skills]
+"Project and programme delivery" = [
+  "managed risks, issues and dependencies, with mitigation plans and escalation to the steering committee",
+  "risk management", "issue management", "dependency management", "change management",
+]
 "Change and communication" = [
   "stakeholder management", "coaching", "negotiation",
   "presentations in English and Japanese to audiences of up to 1,000",
