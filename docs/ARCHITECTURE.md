@@ -63,8 +63,15 @@ Code changes from the current repo:
 
 - Remove the YAML and JSON loaders, `cv.yaml`, `cv.json` and the `pyyaml`
   dependency.
-- Whole-word, case-insensitive matching in `search_cv` and `assess_role_fit`
-  (`\b<keyword>\b` with `re.escape`; multi-word keywords match as phrases).
+- Whole-word, case-insensitive matching in `search_cv` and `assess_role_fit`,
+  by word stem (`_stem`: suffix rules, irregular verbs such as led → lead, and
+  British spellings), so a keyword finds its other forms. A multi-word keyword
+  matches exactly, or when its words (stop words aside) all fall within a few
+  words of each other. `assess_role_fit` also searches job titles, counts the
+  equivalents listed in `cv.toml` under `[matching.equivalents]`, and lets a
+  higher JLPT level satisfy a lower one. Each result quotes the evidence text
+  (300 characters) and carries `how_to_read`: a keyword not found is missing
+  wording, not missing experience.
 - Control endpoint built as a separate FastMCP instance, mounted only when
   `CV_MCP_CONTROL_TOKEN` is set.
 - Delete the Dockerfile and `requirements.txt` once the flake replaces them.

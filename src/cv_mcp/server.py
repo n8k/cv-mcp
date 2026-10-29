@@ -94,24 +94,96 @@ def _find_placeholders(obj: Any, path: str = "") -> list[str]:
 
 # ---------- Matching ----------
 
-def _word_pattern(term: str) -> re.Pattern[str]:
-    """Whole-word, case-insensitive match. Multi-word terms match as a phrase.
+# Words compared by stem, so a keyword finds its other forms: "training" finds
+# "trained", "leadership" finds "led", "management" finds "managed", and British and
+# American spellings meet ("organisation", "organization").
+IRREGULAR = {
+    "led": "lead", "taught": "teach", "built": "build", "ran": "run", "brought": "bring",
+    "bought": "buy", "wrote": "write", "written": "write", "held": "hold", "made": "make",
+    "met": "meet", "sold": "sell", "spoke": "speak", "spoken": "speak", "won": "win",
+    "drove": "drive", "driven": "drive", "grew": "grow", "grown": "grow", "began": "begin",
+    "begun": "begin", "chose": "choose", "chosen": "choose",
+}
+BRITISH = {  # spellings the suffix rules don't join
+    "programme": "program", "programmes": "programs", "centre": "center", "centres": "centers",
+    "labour": "labor", "behaviour": "behavior", "licence": "license", "catalogue": "catalog",
+}
+SUFFIXES = (  # longest first; one is removed per pass
+    ("izations", "ize"), ("ization", "ize"), ("ations", "ate"), ("ation", "ate"),
+    ("erships", ""), ("ership", ""), ("ments", ""), ("ment", ""), ("ings", ""), ("ing", ""),
+    ("ions", ""), ("ion", ""), ("ers", ""), ("er", ""), ("ies", "y"), ("es", ""), ("ed", ""),
+    ("s", ""),
+)
+STOPWORDS = {"a", "an", "and", "at", "by", "for", "in", "of", "on", "or", "the", "to", "with"}
+TOKEN = re.compile(r"\w[\w+#]*|\.\w+")  # keeps "C++", ".NET", "C#"; splits on hyphens
+NEAR = 4  # a phrase's words may sit this many extra words apart, in any order
 
-    Simple plurals match both ways: "stakeholder" finds "stakeholders" and
-    "OKRs" finds "OKR". Lookarounds instead of \\b so terms like "C++" or
-    ".NET" still work.
-    """
-    parts = term.split()
-    last = parts[-1]
-    if re.fullmatch(r"\w*[^s\W]s", last, re.IGNORECASE) and len(last) > 3:
-        last = last[:-1]  # "stakeholders" -> "stakeholder", but not "process"
-    stem = r"\s+".join(re.escape(p) for p in [*parts[:-1], last])
-    suffix = "(?:e?s)?" if re.search(r"\w$", last) else ""
-    return re.compile(rf"(?<!\w){stem}{suffix}(?!\w)", re.IGNORECASE)
+
+def _stem(word: str) -> str:
+    w = BRITISH.get(word.lower(), word.lower())
+    if w in IRREGULAR:
+        return IRREGULAR[w]
+    if not w.isalpha() or len(w) < 4:
+        return w
+    w = re.sub(r"is(e|es|ed|ing|ation|ations)$", r"iz\1", w)
+    for _ in range(2):  # "engineering" -> "engineer" -> "engine"
+        for suffix, repl in SUFFIXES:
+            if suffix == "s" and w.endswith(("ss", "us", "is")):
+                continue
+            if w.endswith(suffix) and len(w) - len(suffix) + len(repl) >= 3:
+                w = w[: -len(suffix)] + repl
+                break
+        else:
+            break
+    return w[:-1] if w.endswith("e") and len(w) > 3 else w
+
+
+def _stems(text: str) -> list[str]:
+    return [_stem(t) for t in TOKEN.findall(text)]
 
 
 def _count_matches(term: str, text: str) -> int:
-    return len(_word_pattern(term).findall(text))
+    """How often a term occurs in the text, case-insensitively, by word stem.
+
+    A one-word term matches whole words only ("AI" is not in "claims chain"). A phrase
+    matches exactly, or when its words (stop words aside) all occur within a few words of
+    each other: "team leadership" finds "led a 30-person team".
+    """
+    want = _stems(term)
+    if not want:
+        return 0
+    words = _stems(text)
+    if len(want) == 1:
+        return words.count(want[0])
+    n = len(want)
+    exact = sum(words[i : i + n] == want for i in range(len(words) - n + 1))
+    if exact:
+        return exact
+    needed = {w for w in want if w not in STOPWORDS} or set(want)
+    span = len(needed) + NEAR
+    count, i = 0, 0
+    while i < len(words):
+        if words[i] in needed and needed <= set(words[i : i + span]):
+            count += 1
+            i += span
+        else:
+            i += 1
+    return count
+
+
+def _jlpt_levels(keyword: str) -> list[str]:
+    """A higher JLPT level satisfies a lower one: N1 is the highest, N5 the lowest."""
+    m = re.search(r"\bN([1-5])\b", keyword, re.IGNORECASE)
+    if not m or not (re.search(r"\bJLPT\b", keyword, re.IGNORECASE) or keyword.strip().upper() == m.group(0).upper()):
+        return []
+    level = int(m.group(1))
+    return [keyword[: m.start()] + f"N{n}" + keyword[m.end() :] for n in range(1, level)]
+
+
+def _alternatives(keyword: str, equivalents: dict[str, list[str]]) -> list[str]:
+    """The keyword, the CV file's equivalents for it ([matching.equivalents]), and higher JLPT levels."""
+    listed = next((v for k, v in equivalents.items() if k.lower() == keyword.lower()), [])
+    return [keyword, *listed, *_jlpt_levels(keyword)]
 
 
 # ---------- Read-only server ----------
@@ -207,6 +279,8 @@ def search_cv(query: str) -> list[dict]:
     for h in p.get("career_highlights", []):
         consider("profile:highlight", h)
     for r in cv["experience"]:
+        if r.get("title"):
+            consider(f"experience:{r['id']}:title", f"{r['title']}, {r['company']}")
         if r.get("summary"):
             consider(f"experience:{r['id']}", r["summary"])
         for h in r.get("highlights", []):
@@ -220,6 +294,17 @@ def search_cv(query: str) -> list[dict]:
         consider(f"case_study:{c['id']}", f"{c.get('title', '')}: {body}{tags}")
 
     return sorted(hits, key=lambda h: h["score"], reverse=True)[:10]
+
+
+NOT_FOUND = "not found in CV text"
+EVIDENCE_CHARS = 300
+HOW_TO_READ = (
+    "'not found in CV text' and keywords_not_found mean those words (or their forms and "
+    "listed equivalents) do not appear in the CV. They do not mean the experience is "
+    "missing: a CV states experience in its own words. Before calling anything a gap, read "
+    "the evidence text, check get_experience and search_cv for related wording, and say "
+    "what you checked."
+)
 
 
 def _role_fit(cv: dict[str, Any], criteria: list[dict] | None = None, role_title: str | None = None) -> dict:
@@ -237,7 +322,12 @@ def _role_fit(cv: dict[str, Any], criteria: list[dict] | None = None, role_title
     for h in person.get("career_highlights", []):
         sources.append(("Career highlight", h))
     for r in cv["experience"]:
-        sources += [(f"{r['company']} — {r.get('title', '')}".rstrip(" —"), h) for h in r.get("highlights", [])]
+        role = f"{r['company']} — {r.get('title', '')}".rstrip(" —")
+        if r.get("title"):
+            sources.append((f"{role} (job title)", r["title"]))
+        if r.get("summary"):
+            sources.append((role, r["summary"]))
+        sources += [(role, h) for h in r.get("highlights", [])]
         sources.append((f"{r['company']} skills", ", ".join(r.get("skills", []))))
     for c in cv["case_studies"]:
         body = " ".join(str(c.get(k, "")) for k in ("title", "situation", "task", "action", "result"))
@@ -245,28 +335,41 @@ def _role_fit(cv: dict[str, Any], criteria: list[dict] | None = None, role_title
     for cat, items in cv["skills"].items():
         sources.append((f"Skills ({cat})", ", ".join(items)))
 
+    equivalents = cv.get("matching", {}).get("equivalents", {})
     results = []
     for crit in criteria:
         kws = crit["keywords"]
+        alts = {k: _alternatives(k, equivalents) for k in kws}
         evidence = []
         for label, text in sources:
-            matched = sorted({k for k in kws if _count_matches(k, text)})
+            matched = sorted({k for k in kws if any(_count_matches(a, text) for a in alts[k])})
             if matched:
-                evidence.append({"source": label, "matched": matched})
+                snippet = text.strip()
+                evidence.append({
+                    "source": label,
+                    "matched": matched,
+                    "text": snippet if len(snippet) <= EVIDENCE_CHARS else snippet[:EVIDENCE_CHARS] + "…",
+                })
         covered = {k for e in evidence for k in e["matched"]}
         coverage = len(covered) / len(kws) if kws else 0
         results.append({
             "criterion": crit["name"],
-            "coverage": "strong" if coverage >= 0.6 else "partial" if coverage > 0 else "gap",
+            "coverage": "strong" if coverage >= 0.6 else "partial" if coverage > 0 else NOT_FOUND,
             "keywords_matched": sorted(covered),
-            "keywords_missing": sorted(set(kws) - covered),
+            "keywords_not_found": sorted(set(kws) - covered),
             "evidence": evidence[:5],
         })
 
     out = {
         "role": role_title or (None if supplied else defaults.get("title")) or "unnamed role",
         "criteria_source": "supplied by caller" if supplied else "generic defaults from the CV file",
-        "method": "Whole-word keyword match (simple plurals included) of CV content against each criterion. Deterministic; no LLM judgement.",
+        "method": (
+            "Keyword match of CV text (job titles included) against each criterion: whole words, "
+            "any word form (led/leading/leadership, trained/training), phrases whose words sit "
+            "close together, equivalents listed in the CV file, and higher JLPT levels for lower "
+            "ones. Deterministic; no LLM judgement."
+        ),
+        "how_to_read": HOW_TO_READ,
         "criteria": results,
     }
     if not supplied:
@@ -299,9 +402,11 @@ def assess_role_fit(
 
     Pass the role's own criteria: turn the job description into 4–8 requirements,
     each with 3–8 keywords or short phrases. For each criterion the tool returns
-    the CV evidence that matches, the keywords found and missing, and a coverage
-    rating (strong / partial / gap). Gaps are reported, not hidden. Without
-    criteria it falls back to generic defaults, which say little about fit.
+    the CV evidence that matches (with its text), the keywords found and not
+    found, and a coverage rating: strong / partial / not found in CV text. A
+    keyword not found is a prompt to check get_experience and search_cv, not
+    proof the experience is missing. Without criteria it falls back to generic
+    defaults, which say little about fit.
     """
     supplied = [c.model_dump() for c in criteria] if criteria is not None else None
     return _role_fit(_clean(load_cv()), supplied, role_title)
@@ -366,7 +471,7 @@ def interview_candidate(job_description: str = "", focus: str = "") -> str:
     )
     return (
         f"You are screening {_candidate_name()}{role}. Start with get_profile.{jd} "
-        "For each criterion rated 'partial' or 'gap', look for supporting detail with search_cv "
+        "For each criterion rated 'partial' or 'not found in CV text', look for supporting detail with search_cv "
         "or get_case_study before concluding, then propose two probing interview questions. "
         "Cite which tool each fact came from, and do not state anything the tools did not return."
     )
@@ -457,12 +562,15 @@ def validate(cv: dict[str, Any]) -> dict:
     ids = [c.get("id") for c in cv.get("case_studies", [])]
     if len(ids) != len(set(ids)):
         errors.append("case_studies ids are not unique")
+    for key, alts in cv.get("matching", {}).get("equivalents", {}).items():
+        if not isinstance(alts, list) or not all(isinstance(a, str) and a.strip() for a in alts):
+            errors.append(f"matching.equivalents.{key} must be a list of non-empty strings")
 
     todos = _find_placeholders(cv)
     gaps: list[str] = []
     if "target_role" in cv:
         fit = _role_fit(_clean(cv))
-        gaps = [c["criterion"] for c in fit["criteria"] if c["coverage"] == "gap"]
+        gaps = [c["criterion"] for c in fit["criteria"] if c["coverage"] == NOT_FOUND]
     return {
         "file": str(cv_path()),
         "ok": not errors and not todos,

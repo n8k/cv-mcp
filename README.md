@@ -16,8 +16,8 @@ Read-only endpoint, `/mcp`:
 | Tool | `get_experience` | Work history, optional company filter |
 | Tool | `get_skills` | Skills by category |
 | Tool | `list_case_studies` / `get_case_study` | STAR stories |
-| Tool | `search_cv` | Whole-word keyword search across everything (simple plurals included) |
-| Tool | `assess_role_fit` | Evidence against criteria **you supply** from your job description; gaps shown, not hidden |
+| Tool | `search_cv` | Whole-word keyword search across everything, any word form (led / leadership) |
+| Tool | `assess_role_fit` | Evidence against criteria **you supply** from your job description, with the CV text quoted; keywords not found are shown, not hidden |
 | Resource | `cv://full`, `cv://markdown` | Whole CV as JSON / Markdown |
 | Prompt | `interview_candidate` | Paste a job description; the agent derives criteria and runs a structured screening |
 
