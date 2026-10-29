@@ -104,6 +104,9 @@ IRREGULAR = {
     "drove": "drive", "driven": "drive", "grew": "grow", "grown": "grow", "began": "begin",
     "begun": "begin", "chose": "choose", "chosen": "choose",
 }
+# Words whose "-er" is not a suffix: cut, they would meet unrelated words
+# ("customer" and "custom", "number" and "numb"). Their plurals and verb forms stop here.
+WHOLE_WORDS = {"customer", "number", "member", "order", "letter", "power", "paper", "water"}
 BRITISH = {  # spellings the suffix rules don't join
     "programme": "program", "programmes": "programs", "centre": "center", "centres": "centers",
     "labour": "labor", "behaviour": "behavior", "licence": "license", "catalogue": "catalog",
@@ -126,6 +129,9 @@ def _stem(word: str) -> str:
     if not w.isalpha() or len(w) < 4:
         return w
     w = re.sub(r"is(e|es|ed|ing|ation|ations)$", r"iz\1", w)
+    for ending in ("", "s", "ed", "ing"):
+        if w.endswith(ending) and w[: len(w) - len(ending)] in WHOLE_WORDS:
+            return w[: len(w) - len(ending)]
     for _ in range(2):  # "engineering" -> "engineer" -> "engine"
         for suffix, repl in SUFFIXES:
             if suffix == "s" and w.endswith(("ss", "us", "is")):
@@ -357,7 +363,8 @@ def _role_fit(cv: dict[str, Any], criteria: list[dict] | None = None, role_title
             "coverage": "strong" if coverage >= 0.6 else "partial" if coverage > 0 else NOT_FOUND,
             "keywords_matched": sorted(covered),
             "keywords_not_found": sorted(set(kws) - covered),
-            "evidence": evidence[:5],
+            # Richest first: the entries matching the most keywords, CV order among equals.
+            "evidence": sorted(evidence, key=lambda e: -len(e["matched"]))[:5],
         })
 
     out = {

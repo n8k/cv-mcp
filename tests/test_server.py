@@ -466,6 +466,11 @@ def test_plural_matching(term, text, expected):
         ("people management", "managed 124 projects and 9 project managers", 0),
         ("cost", "costly", 0),
         ("process", "processing", 1),
+        ("customer", "built a custom pipeline", 0),
+        ("customers", "for the customer", 1),
+        ("customer-facing", "customer facing delivery", 1),
+        ("numbers", "numbered", 1),
+        ("order", "ordered parts", 1),
     ],
 )
 def test_word_forms_and_near_phrases(term, text, expected):
@@ -539,6 +544,19 @@ def test_jlpt_and_job_titles_count_as_evidence(tmp_path, monkeypatch):
     assert japanese["coverage"] == "strong"
     assert leadership["coverage"] == "strong"
     assert leadership["evidence"][0]["source"] == "Acme — PMO Department Manager (job title)"
+
+
+def test_evidence_lists_the_richest_entries_first(tmp_path, monkeypatch):
+    many = EQUIVALENTS_CV.replace(
+        'highlights = ["Quarterly reviews with the CEO and CFO."]',
+        'highlights = ["Risk register.", "Risk log.", "Risk review.", "Risk owner.", "Risk desk.", '
+        '"Managed risks, issues and dependencies, with mitigation and escalation."]',
+    )
+    write_cv(tmp_path, many, monkeypatch)
+    crit = [{"name": "Risk", "keywords": ["risk", "issue", "dependency", "mitigation", "escalation"]}]
+    [c] = call(server.mcp, "assess_role_fit", {"criteria": crit})["criteria"]
+    assert len(c["evidence"]) == 5
+    assert c["evidence"][0]["text"].startswith("Managed risks")  # sixth in CV order, first here
 
 
 def test_not_found_comes_with_instructions_to_check():
