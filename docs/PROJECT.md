@@ -18,9 +18,10 @@ demonstrates AI-native work instead of describing it. The repository is
   get correct answers about the CV through the server's tools.
 - G2. Every fact the server returns comes from one TOML file; placeholders
   never reach a client.
-- G3. `assess_role_fit` reports strong / partial / gap per criterion with
-  evidence, using whole-word matching, against criteria the reviewer supplies,
-  and shows gaps rather than hiding them.
+- G3. `assess_role_fit` reports strong / partial / not found in CV text per
+  criterion, with the evidence text, against criteria the reviewer supplies.
+  Missing words are shown, not hidden, and labelled as missing words rather
+  than missing experience, so a reviewer's AI checks before calling a gap.
 - G4. Production costs nothing to host: it runs on the Pi, and the only running
   cost is the `n8k.org` domain.
 - G5. Changes reach production only through testing on the Pi and an explicit
@@ -56,7 +57,7 @@ demonstrates AI-native work instead of describing it. The repository is
 | R3 | Streamable HTTP transport at `/mcp`, plus `GET /health` | must | brainstorm "Decisions made so far" |
 | R4 | CV content in a single `cv.toml`, re-read on every call; YAML/JSON loaders and files removed | must | Clarify round 1 Q5 |
 | R5 | Values starting with `TODO` are stripped before reaching a client | must | brainstorm "Decisions made so far" |
-| R6 | `search_cv` and `assess_role_fit` match keywords as whole words, case-insensitively | must | brainstorm "Known issues" |
+| R6 | `search_cv` and `assess_role_fit` match keywords as whole words, case-insensitively, by word stem (led / leadership, trained / training, British and American spelling); `assess_role_fit` also matches phrases whose words sit close together, job titles, equivalents listed in `cv.toml` (`[matching.equivalents]`) and higher JLPT levels for lower ones | must | brainstorm "Known issues"; Nate, 2026-10-29 (false gaps with a weaker model) |
 | R7 | Real CV content replaces all placeholders; only LinkedIn-level information | must | brainstorm "To do"; history-rewrite discussion |
 | R8 | Automated tests cover every tool, resource and the prompt, and run in CI | must | Clarify round 1 Q5 |
 | R9 | Testing tier on the Pi exposes a control endpoint (`validate_cv`, `reload`) protected by an approval token; production does not | must | Clarify round 1 Q4 |
@@ -144,6 +145,7 @@ cv-mcp | python | yes | needs FastMCP
 | 2026-10-23 | Production on the Pi, public at `n8k.org` through a Cloudflare Tunnel | Azure's setup was too heavy for a small public service; free; production runs byte-for-byte the tested image; no emulation or second registry; always on, so no cold start | Azure Container Apps (chosen 2026-10-22, dropped), Koyeb (0.1 vCPU free instance), Google Cloud Run (billing account, Artifact Registry), Render (one-minute cold start), Oracle Cloud Always Free (a VM to run, hard sign-up) |
 | 2026-10-23 | One aarch64 image for both tiers | Both tiers run on the Pi | x86_64 image built under emulation for a cloud host |
 | 2026-10-24 | Log visits and MCP calls to stdout, journald and Loki; 30 days; truncated IPs; notice on the page; no time-on-page beacon | See who uses the CV and how, with what is already running and no extra store; truncated IPs and a notice keep it proportionate (APPI, GDPR) | Full IPs; a SQLite log on a volume for longer history; a JavaScript beacon for time on page; Cloudflare Web Analytics |
+| 2026-10-29 | Stem and near-phrase matching, searchable job titles, CV-file equivalents, JLPT level rule; "gap" renamed "not found in CV text" with reading instructions and evidence text in every result | Literal matching made the tool itself report false gaps (C-level, team leadership, risk management, JLPT N2) that weaker models repeated as fact | Leave matching literal and rely on the reviewer's model; an embedding or LLM matcher (non-deterministic, needs a model at runtime) |
 
 ## Sources
 

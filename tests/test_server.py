@@ -158,7 +158,7 @@ def test_assess_role_fit_reports_gaps():
     fit = call(server.mcp, "assess_role_fit")
     by_name = {c["criterion"]: c for c in fit["criteria"]}
     assert fit["role"] == "Head of Digital Delivery"
-    assert by_name["Data platform ownership"]["coverage"] == "gap"
+    assert by_name["Data platform ownership"]["coverage"] == server.NOT_FOUND
     assert by_name["Data platform ownership"]["evidence"] == []
     assert by_name["Governance & responsible AI"]["coverage"] == "strong"
 
@@ -188,7 +188,7 @@ def test_word_matching(term, text, expected):
 def test_role_fit_ignores_substrings(tmp_path, monkeypatch):
     write_cv(tmp_path, MINIMAL, monkeypatch)
     fit = call(server.mcp, "assess_role_fit")
-    assert fit["criteria"][0]["coverage"] == "gap"  # "claims chain" must not count as AI
+    assert fit["criteria"][0]["coverage"] == server.NOT_FOUND  # "claims chain" must not count as AI
     assert call(server.mcp, "search_cv", {"query": "AI"}) == []
 
 
@@ -394,9 +394,9 @@ def test_role_fit_with_supplied_criteria():
     assert fit["role"] == "Delivery Lead"
     assert fit["criteria_source"] == "supplied by caller"
     assert "note" not in fit
-    assert by_name["Stakeholder management"]["coverage"] != "gap"
-    assert by_name["Cloud platforms"]["coverage"] == "gap"
-    assert by_name["Cloud platforms"]["keywords_missing"] == ["AWS", "Kubernetes"]
+    assert by_name["Stakeholder management"]["coverage"] != server.NOT_FOUND
+    assert by_name["Cloud platforms"]["coverage"] == server.NOT_FOUND
+    assert by_name["Cloud platforms"]["keywords_not_found"] == ["AWS", "Kubernetes"]
 
 
 def test_role_fit_defaults_carry_a_note():
@@ -446,6 +446,120 @@ def test_role_fit_schema_advertises_criteria():
 )
 def test_plural_matching(term, text, expected):
     assert server._count_matches(term, text) == expected
+
+
+# ---------- Word forms, phrases, equivalents, JLPT, titles ----------
+
+@pytest.mark.parametrize(
+    ("term", "text", "expected"),
+    [
+        ("training", "trained 150+ staff", 1),
+        ("leadership", "led the programme", 1),
+        ("management", "managed vendors", 1),
+        ("organisation", "a new organization", 1),
+        ("program management", "programme management", 1),
+        ("data center", "three data centres", 1),
+        ("mitigation", "mitigated the risk", 1),
+        ("team leadership", "hired and led a 30-person team", 1),
+        ("led a team", "led a cross-functional team of 160+", 1),
+        ("risk management", "managed risks, issues and dependencies", 1),
+        ("people management", "managed 124 projects and 9 project managers", 0),
+        ("cost", "costly", 0),
+        ("process", "processing", 1),
+    ],
+)
+def test_word_forms_and_near_phrases(term, text, expected):
+    assert server._count_matches(term, text) == expected
+
+
+@pytest.mark.parametrize(
+    ("keyword", "alternatives"),
+    [
+        ("JLPT N2", ["JLPT N2", "JLPT N1"]),
+        ("JLPT N1", ["JLPT N1"]),
+        ("N3", ["N3", "N1", "N2"]),
+        ("Japanese N2 level", ["Japanese N2 level"]),  # no JLPT, not a bare level: left alone
+    ],
+)
+def test_higher_jlpt_levels_satisfy_lower(keyword, alternatives):
+    assert server._alternatives(keyword, {}) == alternatives
+
+
+EQUIVALENTS_CV = """
+[person]
+name = "Test Person"
+headline = "h"
+location = "l"
+summary = "s"
+languages = ["Japanese (JLPT N1)"]
+
+[[experience]]
+id = "acme"
+company = "Acme"
+title = "PMO Department Manager"
+start = "2020"
+end = "2021"
+highlights = ["Quarterly reviews with the CEO and CFO."]
+skills = []
+
+[skills]
+x = ["y"]
+
+[[case_studies]]
+id = "c"
+title = "t"
+
+[target_role]
+title = "r"
+
+[[target_role.criteria]]
+name = "n"
+keywords = ["k"]
+
+[matching.equivalents]
+"C-level" = ["CEO", "CFO"]
+"""
+
+
+def test_equivalents_from_the_cv_file_count_and_quote_the_text(tmp_path, monkeypatch):
+    write_cv(tmp_path, EQUIVALENTS_CV, monkeypatch)
+    crit = [{"name": "C-level engagement", "keywords": ["c-level"]}]
+    [c] = call(server.mcp, "assess_role_fit", {"criteria": crit})["criteria"]
+    assert c["coverage"] == "strong"
+    assert c["evidence"][0]["text"] == "Quarterly reviews with the CEO and CFO."
+
+
+def test_jlpt_and_job_titles_count_as_evidence(tmp_path, monkeypatch):
+    write_cv(tmp_path, EQUIVALENTS_CV, monkeypatch)
+    crit = [
+        {"name": "Japanese", "keywords": ["JLPT N2"]},
+        {"name": "Leadership", "keywords": ["department manager"]},
+    ]
+    japanese, leadership = call(server.mcp, "assess_role_fit", {"criteria": crit})["criteria"]
+    assert japanese["coverage"] == "strong"
+    assert leadership["coverage"] == "strong"
+    assert leadership["evidence"][0]["source"] == "Acme — PMO Department Manager (job title)"
+
+
+def test_not_found_comes_with_instructions_to_check():
+    fit = call(server.mcp, "assess_role_fit", {"criteria": REVIEWER_CRITERIA})
+    assert "do not mean the experience is missing" in fit["how_to_read"]
+    assert "get_experience" in fit["how_to_read"]
+
+
+def test_search_cv_finds_job_titles():
+    sources = [h["source"] for h in call(server.mcp, "search_cv", {"query": "transformation manager"})]
+    assert any(s.endswith(":title") for s in sources)
+
+
+def test_validate_flags_malformed_equivalents(tmp_path, monkeypatch):
+    write_cv(tmp_path, EQUIVALENTS_CV.replace('"C-level" = ["CEO", "CFO"]', '"C-level" = "CEO"'), monkeypatch)
+    assert any("matching.equivalents" in e for e in call(server.control, "validate_cv")["errors"])
+
+
+def test_shipped_cv_equivalents_are_well_formed(monkeypatch):
+    monkeypatch.setenv("CV_PATH", str(ROOT / "cv.toml"))
+    assert not [e for e in call(server.control, "validate_cv")["errors"] if "equivalents" in e]
 
 
 def test_prompt_with_job_description():

@@ -269,3 +269,17 @@ keywords = ["coaching", "negotiating", "stakeholders", "vendor", "trained"]
 [[target_role.criteria]]
 name = "Bilingual, intercultural delivery"
 keywords = ["Japanese", "English", "intercultural", "translation"]
+
+# Equivalents for assess_role_fit: a reviewer's keyword (left) also counts when one of
+# these phrases from this CV is found. Only list what is true; the evidence quotes the CV
+# text, so the reviewer sees why it matched. Word forms (led/leadership), British and
+# American spelling, and higher JLPT levels are handled without entries here.
+[matching.equivalents]
+"C-level" = ["C-suite", "CEO", "CFO", "CIO", "CTO", "COO", "CRO"]
+"C-suite" = ["C-level", "CEO", "CFO", "CIO", "CTO", "COO", "CRO"]
+"executive stakeholders" = ["C-suite", "CTO", "executive review"]
+"customer-facing" = ["for a Japanese telecom operator", "for public-sector clients", "customer service"]
+"client delivery" = ["for a Japanese telecom operator", "for public-sector clients"]
+"people management" = ["hired and led a 30-person team", "9 project managers", "5 project managers"]
+"organizational change" = ["change management", "transformation", "new ways of working"]
+"business Japanese" = ["JLPT N1"]
