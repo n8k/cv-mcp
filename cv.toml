@@ -209,6 +209,24 @@ result = "6,000 servers deployed across 45 colocation data centers."
 tags = ["program management", "scale", "vendor management", "telecom"]
 
 [[case_studies]]
+id = "network-cutover"
+title = "Production network cutover for Rakuten Mobile's launch"
+situation = "At Rakuten Mobile, the production network had to be cut over from a 10 Gbps test ISP connection to production capacity, two 100 Gbps connections, in preparation for launch."
+task = "Lead the cutover project and complete it within four weeks to meet a fixed launch date."
+action = "Gathered requirements and brought together 40 stakeholders across multiple functions and vendors. Coordinated the cutover plan and coached team members who were new to telecom-grade change management on the new change-request (CR) process. Assigned each technical area's stakeholder responsibility for drafting their section, then consolidated the drafts into a coordinated plan."
+result = "Within four weeks, planned and executed a five-part change request and completed the production network cutover during a six-hour maintenance window."
+tags = ["change management", "cutover", "stakeholder management", "vendor management", "telecom", "network", "coaching", "delivery"]
+
+[[case_studies]]
+id = "telco-app-launches"
+title = "Approval and QA pipeline for Rakuten Mobile's telco apps"
+situation = "Rakuten Mobile's telco-product portfolio needed a consistent way to evaluate, test and launch new products across multiple teams."
+task = "As Product Owner for the Telco-App working group, oversee new telco-app deployments and coordinate priorities and launch decisions."
+action = "Worked with a cross-functional QA group to design the lab-approval and QA pipeline, set product priorities, and coordinated teams through an Agile Scrum of Scrums. Reviewed launch readiness and greenlit new products, including Rakuten Voice AI, microservice-VRAN and the Observability Framework."
+result = "Established a structured approval and QA approach for telco-app deployments and supported the launch of these new products."
+tags = ["product ownership", "QA", "governance", "agile", "Scrum of Scrums", "prioritisation", "telecom", "product launch"]
+
+[[case_studies]]
 id = "first-nations-internet"
 title = "First internet service for a remote First Nations community"
 situation = "A remote community had no internet service, and the build season is a two-month Northern Canada summer."
@@ -218,6 +236,15 @@ result = "Internet service delivered for the first time, within the summer windo
 tags = ["delivery", "community impact", "constraints", "construction"]
 
 [[case_studies]]
+id = "undersea-cable-readiness"
+title = "Long-term readiness for undersea cable repairs"
+situation = "Undersea cable faults can require complex repairs, and Telus needed a long-term plan to maintain operational readiness over a 30-year horizon."
+task = "Manage a cross-functional programme to develop a sustainable approach to cable-repair readiness and secure long-term budget support for ongoing and ad-hoc mitigations."
+action = "Coordinated stakeholders across functions, developed the business case for standing long-term mitigation plans, and presented it to VP-level leaders to obtain funding."
+result = "Secured funding for the mitigation plans, establishing a long-term foundation for undersea cable repair readiness."
+tags = ["programme management", "business cases", "executive stakeholders", "risk management", "operational readiness", "telecom", "funding"]
+
+[[case_studies]]
 id = "parliament-radio"
 title = "Radio system for the Canadian Parliament's police"
 situation = "The Parliament's police needed a new radio system across 30 historic buildings and underground."
@@ -225,6 +252,15 @@ task = "Deliver a multi-year upgrade in heritage, high-security buildings."
 action = "Managed heritage-building permits, security clearances, safety orientations and global logistics for multiple vendors, plus subcontracts, scheduling, budgets, reporting and contract changes."
 result = "Radio system upgraded across 30 Parliament buildings."
 tags = ["public sector", "security", "stakeholder management", "delivery"]
+
+[[case_studies]]
+id = "refinery-radio-migration"
+title = "Emergency radio system migration for a refinery"
+situation = "At Glentel, a refinery client's radio system was corroding and failing, making an emergency replacement necessary. The migration had to meet strict regulatory and technical requirements on a compressed timeline."
+task = "Complete the system migration safely, compliantly, on time and within budget."
+action = "Worked with the regulatory agency to secure licences quickly for an interim system. Assessed the project's technical and schedule risks, then made carefully considered trade-offs to keep the migration moving while meeting the required constraints."
+result = "Migration completed on time and within budget, with the necessary interim-system licences in place."
+tags = ["emergency delivery", "regulatory compliance", "risk management", "trade-offs", "radio systems", "budget management", "client delivery"]
 
 [[case_studies]]
 id = "cv-mcp"

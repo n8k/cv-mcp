@@ -109,7 +109,8 @@ IRREGULAR = {
 WHOLE_WORDS = {"customer", "number", "member", "order", "letter", "power", "paper", "water"}
 BRITISH = {  # spellings the suffix rules don't join
     "programme": "program", "programmes": "programs", "centre": "center", "centres": "centers",
-    "labour": "labor", "behaviour": "behavior", "licence": "license", "catalogue": "catalog",
+    "labour": "labor", "behaviour": "behavior", "licence": "license", "licences": "licenses",
+    "catalogue": "catalog",
 }
 SUFFIXES = (  # longest first; one is removed per pass
     ("izations", "ize"), ("ization", "ize"), ("ations", "ate"), ("ation", "ate"),

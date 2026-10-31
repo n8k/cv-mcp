@@ -466,6 +466,7 @@ def test_plural_matching(term, text, expected):
         ("people management", "managed 124 projects and 9 project managers", 0),
         ("cost", "costly", 0),
         ("process", "processing", 1),
+        ("licenses", "secured licences quickly", 1),
         ("customer", "built a custom pipeline", 0),
         ("customers", "for the customer", 1),
         ("customer-facing", "customer facing delivery", 1),
