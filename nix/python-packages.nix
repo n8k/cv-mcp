@@ -66,6 +66,16 @@ let
       ];
     };
 
+    # nixpkgs has 1.6.9 (CVE-2026-119283, fixed in 1.7.5). fastmcp.server.auth imports it at
+    # start-up, so it is upgraded rather than left out like authlib.
+    joserfc = wheel {
+      pname = "joserfc";
+      version = "1.7.7";
+      url = "https://files.pythonhosted.org/packages/df/9f/934db284aa22f37af59708e382903860d4b81329c137b1b0ed2745daeb65/joserfc-1.7.7-py3-none-any.whl";
+      hash = "sha256-Bpec+6t4vIAvFMA1jzKWmCbMJnIOE8s4km/9yGvAyyw=";
+      dependencies = [ ps.cryptography ];
+    };
+
     mcp-types = wheel {
       pname = "mcp-types";
       version = "2.3.0";
@@ -186,7 +196,7 @@ let
         certifi
         cyclopts
         griffelib
-        joserfc
+        self.joserfc
         jsonref
         jsonschema-path
         self.openapi-pydantic
