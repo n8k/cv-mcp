@@ -209,6 +209,15 @@ result = "6,000 servers deployed across 45 colocation data centers."
 tags = ["program management", "scale", "vendor management", "telecom"]
 
 [[case_studies]]
+id = "network-cutover"
+title = "Production network cutover for Rakuten Mobile's launch"
+situation = "At Rakuten Mobile, the production network had to be cut over from a 10 Gbps test ISP connection to production capacity, two 100 Gbps connections, in preparation for launch."
+task = "Lead the cutover project and complete it within four weeks to meet a fixed launch date."
+action = "Gathered requirements and brought together 40 stakeholders across multiple functions and vendors. Coordinated the cutover plan and coached team members who were new to telecom-grade change management on the new change-request (CR) process. Assigned each technical area's stakeholder responsibility for drafting their section, then consolidated the drafts into a coordinated plan."
+result = "Within four weeks, planned and executed a five-part change request and completed the production network cutover during a six-hour maintenance window."
+tags = ["change management", "cutover", "stakeholder management", "vendor management", "telecom", "network", "coaching", "delivery"]
+
+[[case_studies]]
 id = "first-nations-internet"
 title = "First internet service for a remote First Nations community"
 situation = "A remote community had no internet service, and the build season is a two-month Northern Canada summer."
