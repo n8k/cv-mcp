@@ -44,13 +44,14 @@ let
       dependencies = [ ];
     };
 
-    # nixpkgs has 2.8.0 (CVE-2026-114605, fixed in 2.9.0). Pulled in by email-validator,
-    # which pydantic[email] needs; a hard requirement of fastmcp-slim.
+    # nixpkgs has 2.8.0 (CVE-2026-114605, fixed in 2.9.0; CVE-2026-128089, fixed in 2.9.2).
+    # Pulled in by email-validator, which pydantic[email] needs; a hard requirement of
+    # fastmcp-slim.
     dnspython = wheel {
       pname = "dnspython";
-      version = "2.9.0";
-      url = "https://files.pythonhosted.org/packages/10/02/cdcc9b7c051786a103c3b09e1003a82fa0c66bcb91ffbdabcfbf7b4163b9/dnspython-2.9.0-py3-none-any.whl";
-      hash = "sha256-mkrtuDPDwbSSFNBNRNMDKrepE198HSmlSbT/eP2C/ak=";
+      version = "2.9.2";
+      url = "https://files.pythonhosted.org/packages/1e/0c/5346358b3a20275d256978c35203ddc2c8617f78c1b23795b79ba22ced6d/dnspython-2.9.2-py3-none-any.whl";
+      hash = "sha256-rxX304Wmri+zWnlv3iE4AEyMQsc4kJDirdyD47M0D9g=";
       dependencies = [ ];
     };
 

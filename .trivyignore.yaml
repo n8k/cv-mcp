@@ -19,23 +19,23 @@
 # and its tunnel (production), which terminate TLS.
 vulnerabilities:
   - id: CVE-2026-63374
-    statement: anyio TLS client hostname check; cv-mcp opens no TLS client connections
-    expired_at: 2026-11-22
+    statement: anyio TLS client hostname check; cv-mcp opens no TLS client connections. nixos-26.05 has 4.15.1 (fixed) since 0dc498b; drop this entry at the next flake update
+    expired_at: 2026-12-25
   - id: GHSA-6q48-6c7w-9gw2
     statement: nixpkgs certifi is patched to use the nss-cacert bundle, not its own cacert.pem
-    expired_at: 2026-11-22
+    expired_at: 2026-12-25
   - id: GHSA-537c-gmf6-5ccf
     statement: concerns OpenSSL bundled in PyPI cryptography wheels; nixpkgs links its own OpenSSL
-    expired_at: 2026-11-22
+    expired_at: 2026-12-25
   - id: CVE-2026-69247
     statement: cryptography PKCS#7 decryption; not used by cv-mcp
-    expired_at: 2026-11-22
+    expired_at: 2026-12-25
   - id: CVE-2026-69249
     statement: cryptography X.509 path building; cv-mcp verifies no certificates
-    expired_at: 2026-11-22
+    expired_at: 2026-12-25
   - id: CVE-2026-53539
     statement: python-multipart form parsing; cv-mcp parses no forms
-    expired_at: 2026-11-22
+    expired_at: 2026-12-25
   - id: CVE-2026-54283
     statement: starlette request.form(); cv-mcp never calls it
-    expired_at: 2026-11-22
+    expired_at: 2026-12-25
