@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="$name's CV as an MCP server: connect it to Claude or Copilot Studio and ask about experience, case studies and role fit.">
+<meta name="description" content="$name's CV as an MCP server: connect it to Claude, ChatGPT or Copilot Studio and ask about experience, case studies and role fit.">
 <title>$name · CV as an MCP server</title>
 <style>
   :root {
@@ -92,10 +92,12 @@
   .card .for { color: var(--muted); font-size: 0.9rem; margin: 0 0 1rem; }
   .card.claude h3 { color: var(--violet); }
   .card.copilot h3 { color: var(--indigo); }
+  .card.chatgpt h3 { color: var(--sage); }
   ol { margin: 0; padding-left: 1.25rem; }
   ol li { margin: 0.4rem 0; }
   ol li::marker { color: var(--violet); font-weight: 600; }
   .card.copilot ol li::marker { color: var(--indigo); }
+  .card.chatgpt ol li::marker { color: var(--sage); }
   .path { color: var(--peach); }
   .caveat { margin: 1rem 0 0; color: var(--muted); font-size: 0.85rem; }
 
@@ -162,6 +164,17 @@
           <li>Ask a question. Claude asks before its first tool call; every tool is read-only, so "Always allow" is safe.</li>
         </ol>
         <p class="caveat">On Team and Enterprise plans an owner may need to allow custom connectors first.</p>
+      </article>
+      <article class="card chatgpt">
+        <h3>ChatGPT</h3>
+        <p class="for">chatgpt.com on the web</p>
+        <ol>
+          <li>Open <span class="path">Plugins</span>, select the plus button and choose <span class="path">Add custom MCP server</span>.</li>
+          <li>Give it a name (for example <code>CV-MCP</code>), paste the server URL, and set authentication to <span class="path">No authentication</span>.</li>
+          <li>Accept the risk warning, choose <span class="path">Create as a plugin</span>, then install it.</li>
+          <li>In a new chat, type <code>@</code>, pick the plugin, and ask a question. Every tool is marked read-only, so no approvals are needed.</li>
+        </ol>
+        <p class="caveat">Custom MCP servers are web only and depend on your plan: Business and Enterprise/Edu, where an admin may need to allow them, and Pro with read and fetch tools.</p>
       </article>
       <article class="card copilot">
         <h3>Microsoft Copilot Studio</h3>
