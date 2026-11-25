@@ -10,7 +10,7 @@ certifications = [
 ]
 career_highlights = [
   "New operating model: key contributor to Manulife's Scaled Agile transformation. Identified value streams, coached agile release trains, introduced OKRs as a measure of success, and taught certification courses to 200+ people.",
-  "AI and automation in daily operations: built Copilot prompts that turn project plans and financials into polished business cases and reports, adopted by 30 project managers and saving an estimated 4 hours per person per month, and a Power Automate approval process whose early-voting design eliminated more than 50% of executive-review meetings.",
+  "AI and automation in daily operations: built Copilot prompts that turn project plans and financials into polished business cases and reports, adopted by 30 project managers and saving an estimated 4 hours per person per month, then evolved them into a Copilot Studio agent with 16 skills and 25+ knowledge sources; and a Power Automate approval process whose early-voting design eliminated more than 50% of executive-review meetings.",
   "Value realisation: lead quarterly executive reviews with the C-suite (CEO, CFO, CIO, CRO and COO) of a $60M portfolio (50+ projects a year), holding teams accountable for budget, schedule and committed KPI/OKR outcomes.",
   "Change at scale: trained 150+ Telus staff in agile as the company pivoted to software-based networks; led a cross-functional team of 160+ internal and vendor staff through a nationwide rollout at Rakuten Mobile.",
 ]
@@ -50,14 +50,14 @@ location = "Tokyo"
 start = "2022-11"
 end = "present"
 highlights = [
-  "Generative AI for business process: created Copilot prompts, including a business case prompt that produces polished business cases from project-plan and financial inputs; a project report prompt that takes project lead inputs and outputs them in a standard format; and multiple prompts for business case reviews and portfolio reports that take in data and provide focused, actionable reports. Drove adoption among 30 project managers and embedded the prompts into PMO operations, saving an estimated 4 hours per person per month across all prompts (about 120 hours a month).",
+  "Generative AI for business process: created Copilot prompts, including a business case prompt that produces polished business cases from project-plan and financial inputs; a project report prompt that takes project lead inputs and outputs them in a standard format; and multiple prompts for business case reviews and portfolio reports that take in data and provide focused, actionable reports. Drove adoption among 30 project managers and embedded the prompts into PMO operations, saving an estimated 4 hours per person per month across all prompts (about 120 hours a month). Then evolved the prompts into a Copilot Studio agent powered by GPT-6.1 Sol, with 16 SKILL.md documents and over 25 knowledge sources: business cases, project reports, live queries to the project-status database, onboarding for new joiners, Planview guides, an OKR advisor, a calendar advisor and IFRS 17 cost-savings guidance.",
   "Scaled Agile (SAFe) transformation: key volunteer in the ongoing, company-wide transformation of the delivery model from waterfall to value streams, including the change management that goes with it. Identified value streams, introduced an OKR library that changed how business cases measure success, coached agile release trains, taught certification courses to 200+ people, and updated the governance model to enable business agility and continuous value delivery.",
   "Outcome-based business cases: replaced the iron-triangle view of success (scope, schedule, budget) with OKRs that align business cases to strategic outcomes, so proposals must define measurable business outcomes and value realisation. Even projects with no financial benefit, such as regulatory mandates, now have to prove measurable results such as reduced risk and fewer incidents.",
   "Process redesign with Power Automate: replaced in-meeting business case reviews with an online process that accepts submissions, alerts stakeholders and records auditable approvals. Versioned roll-outs of modules onto a static SharePoint page ensure stability, and early executive voting lets executives pre-read and approve in advance, eliminating more than 50% of executive meetings.",
   "Portfolio governance and outcomes: lead pre-review and quarterly executive review meetings with the C-suite (CEO, CFO, CIO, CRO and COO) for a $60M portfolio (50+ projects a year); approve scope and benefit changes and coach the business team on KPI and OKR targets.",
   "Data-driven reporting: replaced manually built PowerPoint decks with Power BI dashboards showing real-time financials and OKRs, with exportable decks for presentations and audit archives.",
 ]
-skills = ["generative AI", "Copilot", "Power Automate", "Power BI", "SharePoint", "SAFe", "value streams", "OKR", "KPI", "portfolio management", "project governance", "process redesign", "change management", "risk management", "executive stakeholder management"]
+skills = ["generative AI", "Copilot", "Copilot Studio", "AI agents", "Power Automate", "Power BI", "SharePoint", "SAFe", "value streams", "OKR", "KPI", "portfolio management", "project governance", "process redesign", "change management", "risk management", "executive stakeholder management"]
 
 [[experience]]
 id = "nokia"
@@ -166,7 +166,7 @@ skills = ["teaching", "Japanese"]
   "business cases", "executive summaries", "policies", "Japanese-English translation",
 ]
 "AI and digital" = [
-  "Microsoft Copilot", "Power Automate", "Power BI", "Claude Code", "Python", "GitHub",
+  "Microsoft Copilot", "Copilot Studio", "Power Automate", "Power BI", "Claude Code", "Python", "GitHub",
   "Docker", "Jira", "Confluence", "Planview", "Smartsheet", "Domo", "Salesforce",
   "SAP Project System", "Microsoft 365",
 ]
@@ -183,12 +183,12 @@ tags = ["Power Automate", "automation", "governance", "process redesign"]
 
 [[case_studies]]
 id = "copilot-prompts"
-title = "Copilot prompts adopted by 30 project managers"
-situation = "Project managers created business cases manually in PowerPoint."
-task = "Use generative AI to cut that work and standardise the output."
-action = "Created a set of Copilot prompts: one that produces polished business cases from project-plan and financial inputs, one that turns project lead inputs into a standard project report, and others for business case reviews and portfolio reports that give focused, actionable output."
-result = "Adopted by 30 project managers and embedded into PMO operations: an estimated 4 hours saved per person per month across all prompts, a productivity gain of about 120 hours a month."
-tags = ["generative AI", "Copilot", "AI adoption", "productivity", "process redesign"]
+title = "From Copilot prompts to a Copilot Studio PMO assistant"
+situation = "Project managers created business cases and project reports manually in PowerPoint. A first set of copy-paste Copilot prompts was adopted by 30 project managers, but each prompt had to be found, pasted and filled in by hand, and could not reach live project data."
+task = "Turn the prompts into a single assistant that project managers and new joiners can use for the PMO's everyday work, grounded in the PMO's own guidance and data."
+action = "Rebuilt the prompts as a Copilot Studio agent powered by GPT-6.1 Sol, with 16 SKILL.md documents defining its skills and over 25 knowledge sources. Features: business case creation; project reports; live queries to the project-status database; an introduction to basic concepts for new joiners; Planview guides; an OKR advisor; a calendar advisor; and IFRS 17 cost-savings guidance."
+result = "The prompts were adopted by 30 project managers and embedded into PMO operations, saving an estimated 4 hours per person per month (about 120 hours a month)."
+tags = ["generative AI", "Copilot", "Copilot Studio", "AI agents", "agentic AI", "AI adoption", "knowledge management", "productivity", "process redesign", "OKR"]
 
 [[case_studies]]
 id = "safe-transformation"
